@@ -6,7 +6,7 @@
     "categoryId": "1767966254373",
     "isFrequent": true,
     "createdAt": "2025-01-09T00:00:00.000Z",
-    "updatedAt": "2025-01-09T00:00:00.000Z"
+    "updatedAt": "2026-01-09T14:01:23.253Z"
   },
   {
     "id": "q2",
@@ -23,15 +23,6 @@
     "content": "TypeScript 提供了两种类型断言语法：<br><br>1. 尖括号语法<br><code>let someValue: any = 'this is a string';<br>let strLength: number = (&lt;string&gt;someValue).length;</code><br><br>2. as 语法（推荐）<br><code>let someValue: any = 'this is a string';<br>let strLength: number = (someValue as string).length;</code><br><br>注意：类型断言不会改变变量的类型，只是告诉 TypeScript 编译器你确信这个值的类型。",
     "categoryId": "1767966254374",
     "isFrequent": false,
-    "createdAt": "2025-01-09T00:00:00.000Z",
-    "updatedAt": "2025-01-09T00:00:00.000Z"
-  },
-  {
-    "id": "q4",
-    "title": "Next.js App Router 特性",
-    "content": "Next.js 13+ 的 App Router 带来了许多新特性：<br><br>1. 基于 React Server Components (RSC)<br>2. 更灵活的路由系统（支持并行路由和拦截路由）<br>3. 内置布局系统<br>4. 服务端组件和客户端组件分离<br>5. 更好的性能优化（Streaming）<br><br>使用 <code>'use client'</code> 指令来标记客户端组件。",
-    "categoryId": "1767966254375",
-    "isFrequent": true,
     "createdAt": "2025-01-09T00:00:00.000Z",
     "updatedAt": "2025-01-09T00:00:00.000Z"
   }
