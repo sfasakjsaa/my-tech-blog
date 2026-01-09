@@ -9,7 +9,17 @@ export async function POST() {
 
     if (!databaseUrl) {
       return NextResponse.json(
-        { success: false, message: "DATABASE_URL 环境变量未配置" },
+        {
+          success: false,
+          message: "DATABASE_URL 环境变量未配置",
+          debug: {
+            hasPGHOST: !!process.env.PGHOST,
+            hasPGPORT: !!process.env.PGPORT,
+            hasPGUSER: !!process.env.PGUSER,
+            hasPGPASSWORD: !!process.env.PGPASSWORD,
+            hasPGDATABASE: !!process.env.PGDATABASE,
+          }
+        },
         { status: 500 }
       )
     }
