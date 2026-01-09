@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { URLSearchParams } from 'url'
 
-const BACKEND_URL = 'https://my-tech-blog-yr64.onrender.com'
+const BACKEND_URL = 'https://azhen-blog-backend.onrender.com'
 
 export async function GET(request: Request) {
   try {

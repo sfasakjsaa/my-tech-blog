@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const BACKEND_URL = 'https://my-tech-blog-yr64.onrender.com'
+const BACKEND_URL = 'https://azhen-blog-backend.onrender.com'
 
 export async function PUT(
   request: Request,
