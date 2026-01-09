@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm install --legacy-peer-deps && pnpm run build"
+  command = "pnpm install && pnpm run build"
   publish = ".next"
 
 [[plugins]]
@@ -7,8 +7,6 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  NPM_FLAGS = "--legacy-peer-deps"
-  NETLIFY_USE_YARN = "false"
   NETLIFY_USE_PNPM = "true"
 
 # API 路由不需要额外的重写规则，Next.js 会自动处理
