@@ -125,8 +125,13 @@ app.delete('/api/categories/:id', async (req, res) => {
     const { id } = req.params;
 
     const categories = await readData('categories.json');
-    const filtered = categories.filter(c => c.id !== id);
+    const index = categories.findIndex(c => c.id === id);
 
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+
+    const filtered = categories.filter(c => c.id !== id);
     await writeData('categories.json', filtered);
     res.json(successResponse(null));
   } catch (error) {
@@ -248,8 +253,13 @@ app.delete('/api/questions/:id', async (req, res) => {
     const { id } = req.params;
 
     const questions = await readData('questions.json');
-    const filtered = questions.filter(q => q.id !== id);
+    const index = questions.findIndex(q => q.id === id);
 
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Question not found' });
+    }
+
+    const filtered = questions.filter(q => q.id !== id);
     await writeData('questions.json', filtered);
     res.json(successResponse(null));
   } catch (error) {

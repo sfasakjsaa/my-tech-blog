@@ -191,10 +191,32 @@ export default function QuestionBankPage({
         }
       } else {
         showAlert("保存失败，请重试", "error")
+        // 失败时也刷新列表，确保数据同步
+        const qResult = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+        if (qResult.success && qResult.data) {
+          setQuestions(qResult.data)
+        }
       }
     } catch (error) {
       console.error("Error saving question:", error)
-      showAlert("保存失败，请重试", "error")
+      const errorMessage = error instanceof Error ? error.message : "未知错误"
+      // 如果是404错误，说明题目已不存在
+      if (errorMessage.includes("404") || errorMessage.includes("not found")) {
+        showAlert("题目不存在，列表已刷新", "warning")
+        setShowQuestionModal(false)
+        setEditingQuestion(null)
+      } else {
+        showAlert("保存失败，请重试", "error")
+      }
+      // 无论如何都刷新列表，确保数据同步
+      try {
+        const qResult = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+        if (qResult.success && qResult.data) {
+          setQuestions(qResult.data)
+        }
+      } catch (e) {
+        console.error("Failed to refresh questions:", e)
+      }
     } finally {
       setIsSubmittingQuestion(false)
     }
@@ -219,11 +241,31 @@ export default function QuestionBankPage({
           } else {
             showAlert("删除失败，请重试", "error")
             closeConfirm()
+            // 失败时也刷新列表，确保数据同步
+            const qResult = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+            if (qResult.success && qResult.data) {
+              setQuestions(qResult.data)
+            }
           }
         } catch (error) {
           console.error("Error deleting question:", error)
-          showAlert("删除失败，请重试", "error")
+          const errorMessage = error instanceof Error ? error.message : "未知错误"
+          // 如果是404错误，说明题目已不存在
+          if (errorMessage.includes("404") || errorMessage.includes("not found")) {
+            showAlert("题目不存在，列表已刷新", "warning")
+          } else {
+            showAlert("删除失败，请重试", "error")
+          }
           closeConfirm()
+          // 无论如何都刷新列表，确保数据同步
+          try {
+            const qResult = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+            if (qResult.success && qResult.data) {
+              setQuestions(qResult.data)
+            }
+          } catch (e) {
+            console.error("Failed to refresh questions:", e)
+          }
         }
       }
     )
