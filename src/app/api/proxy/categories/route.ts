@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const BACKEND_URL = 'http://localhost:8080'
+const BACKEND_URL = 'https://my-tech-blog-yr64.onrender.com'
 
 export async function GET(request: Request) {
   try {
