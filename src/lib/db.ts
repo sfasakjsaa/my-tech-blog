@@ -14,16 +14,33 @@ export async function getDb() {
     return db
   }
 
-  // 从环境变量获取数据库 URL
+  // 从环境变量获取数据库配置
   const databaseUrl = process.env.DATABASE_URL
 
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL environment variable is not set")
+  let connectionString: string
+
+  if (databaseUrl && !databaseUrl.includes('${')) {
+    // 如果有完整的 DATABASE_URL 且不包含变量引用，直接使用
+    connectionString = databaseUrl
+  } else {
+    // 否则从单独的环境变量构建连接字符串（Prisma Postgres 模式）
+    const pgHost = process.env.PGHOST
+    const pgPort = process.env.PGPORT || '5432'
+    const pgUser = process.env.PGUSER || 'postgres'
+    const pgPassword = process.env.PGPASSWORD
+    const pgDatabase = process.env.PGDATABASE || 'postgres'
+
+    if (!pgHost || !pgPassword) {
+      throw new Error("Database environment variables not set. Please check PGHOST and PGPASSWORD")
+    }
+
+    // 构建连接字符串
+    connectionString = `postgresql://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`
   }
 
   // 创建连接池
   pool = new Pool({
-    connectionString: databaseUrl,
+    connectionString: connectionString,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
