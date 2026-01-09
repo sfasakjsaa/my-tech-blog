@@ -1,16 +1,12 @@
 [build]
-  command = "pnpm install && pnpm run build"
+  command = "pnpm run build"
   publish = ".next"
-
-[build.environment]
-  NODE_VERSION = "20"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[functions]
-  node_bundler = "esbuild"
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
 
-[dev]
-  command = "pnpm run dev"
-  port = 5000
+# API 路由不需要额外的重写规则，Next.js 会自动处理

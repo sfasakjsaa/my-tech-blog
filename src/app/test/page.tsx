@@ -20,7 +20,7 @@ export default function TestPage() {
         setResult(data)
       } catch (err) {
         console.error('API error:', err)
-        setError(err.message)
+        setError(err instanceof Error ? err.message : 'Unknown error')
       }
     }
 
