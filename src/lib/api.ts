@@ -1,6 +1,9 @@
 // API 客户端工具模块
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+// 使用前端 API 代理，避免跨域问题
+const API_BASE_URL = ''
+
+console.log('[API Client] Using proxy mode (base URL: empty)')
 
 export interface ApiResponse<T = any> {
   success: boolean
@@ -31,7 +34,9 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const url = `${API_BASE_URL}${endpoint}`
+  const url = `/api/proxy${endpoint}`
+
+  console.log('[API Client] Requesting:', url)
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -39,10 +44,13 @@ async function request<T>(
   }
 
   try {
+    console.log('[API Client] Starting fetch...')
     const response = await fetch(url, {
       ...options,
       headers,
     })
+
+    console.log('[API Client] Response status:', response.status)
 
     const data = await response.json()
 
@@ -52,7 +60,8 @@ async function request<T>(
 
     return data
   } catch (error) {
-    console.error(`API request failed: ${url}`, error)
+    console.error('[API Client] API request failed:', url, error)
+    console.error('[API Client] Error details:', error instanceof Error ? error.message : error)
     throw error
   }
 }
@@ -62,12 +71,12 @@ async function request<T>(
 export const categoryApi = {
   // 获取所有分类
   getAll: async (): Promise<ApiResponse<Category[]>> => {
-    return request<Category[]>("/api/categories")
+    return request<Category[]>("/categories")
   },
 
   // 创建分类
   create: async (name: string): Promise<ApiResponse<Category>> => {
-    return request<Category>("/api/categories", {
+    return request<Category>("/categories", {
       method: "POST",
       body: JSON.stringify({ name }),
     })
@@ -75,7 +84,7 @@ export const categoryApi = {
 
   // 更新分类
   update: async (id: string, name: string, order: number): Promise<ApiResponse<Category>> => {
-    return request<Category>(`/api/categories/${id}`, {
+    return request<Category>(`/categories/${id}`, {
       method: "PUT",
       body: JSON.stringify({ name, order }),
     })
@@ -83,14 +92,14 @@ export const categoryApi = {
 
   // 删除分类
   delete: async (id: string): Promise<ApiResponse<void>> => {
-    return request<void>(`/api/categories/${id}`, {
+    return request<void>(`/categories/${id}`, {
       method: "DELETE",
     })
   },
 
   // 更新分类排序
   reorder: async (categories: { id: string; order: number }[]): Promise<ApiResponse<void>> => {
-    return request<void>("/api/categories/reorder", {
+    return request<void>("/categories/reorder", {
       method: "POST",
       body: JSON.stringify({ categories }),
     })
@@ -106,7 +115,7 @@ export const questionApi = {
     if (params?.categoryId) searchParams.append("categoryId", params.categoryId)
     if (params?.search) searchParams.append("search", params.search)
 
-    const endpoint = `/api/questions${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
+    const endpoint = `/questions${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
     return request<Question[]>(endpoint)
   },
 
@@ -117,7 +126,7 @@ export const questionApi = {
     categoryId: string
     isFrequent?: boolean
   }): Promise<ApiResponse<Question>> => {
-    return request<Question>("/api/questions", {
+    return request<Question>("/questions", {
       method: "POST",
       body: JSON.stringify(data),
     })
@@ -133,7 +142,7 @@ export const questionApi = {
       isFrequent?: boolean
     }
   ): Promise<ApiResponse<Question>> => {
-    return request<Question>(`/api/questions/${id}`, {
+    return request<Question>(`/questions/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     })
@@ -141,14 +150,14 @@ export const questionApi = {
 
   // 删除题目
   delete: async (id: string): Promise<ApiResponse<void>> => {
-    return request<void>(`/api/questions/${id}`, {
+    return request<void>(`/questions/${id}`, {
       method: "DELETE",
     })
   },
 
   // 更新题目排序
   reorder: async (questions: { id: string; order: number }[]): Promise<ApiResponse<void>> => {
-    return request<void>("/api/questions/reorder", {
+    return request<void>("/questions/reorder", {
       method: "POST",
       body: JSON.stringify({ questions }),
     })

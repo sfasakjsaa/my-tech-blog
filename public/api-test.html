@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API 测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .test-button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    .test-button:hover {
+      background: #45a049;
+    }
+    .log {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-bottom: 1px solid #0f3460;
+    }
+    .success { color: #4CAF50; }
+    .error { color: #f44336; }
+    .info { color: #2196F3; }
+    .url-input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      background: #16213e;
+      border: 1px solid #0f3460;
+      color: #eee;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 API 连接测试工具</h1>
+
+    <div>
+      <label>API URL:</label>
+      <input type="text" id="apiUrl" class="url-input" value="http://localhost:8080/api/categories" />
+    </div>
+
+    <div>
+      <button class="test-button" onclick="testFetch()">测试 Fetch</button>
+      <button class="test-button" onclick="testXHR()">测试 XHR</button>
+      <button class="test-button" onclick="clearLog()">清空日志</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    const log = document.getElementById('log');
+    const apiUrlInput = document.getElementById('apiUrl');
+
+    function addLog(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      log.innerHTML = '';
+    }
+
+    async function testFetch() {
+      const url = apiUrlInput.value;
+      addLog(`开始 Fetch 测试...`, 'info');
+      addLog(`URL: ${url}`, 'info');
+
+      try {
+        const startTime = Date.now();
+        addLog('发送请求...', 'info');
+
+        const response = await fetch(url);
+        const duration = Date.now() - startTime;
+
+        addLog(`响应状态: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+        addLog(`耗时: ${duration}ms`, 'info');
+
+        const data = await response.json();
+        addLog(`响应数据: ${JSON.stringify(data, null, 2)}`, 'success');
+      } catch (error) {
+        addLog(`错误: ${error.message}`, 'error');
+
+        if (error instanceof TypeError) {
+          addLog('TypeError: 可能是网络连接、CORS 或 URL 格式问题', 'error');
+
+          // 检查常见问题
+          if (error.message.includes('Failed to fetch')) {
+            addLog('诊断:', 'error');
+            addLog('- 检查后端服务是否启动 (http://localhost:8080)', 'error');
+            addLog('- 检查浏览器控制台 Network 标签', 'error');
+            addLog('- 检查 CORS 配置', 'error');
+            addLog('- 尝试使用 curl 或 postman 测试', 'error');
+          }
+        }
+
+        console.error('Full error:', error);
+      }
+    }
+
+    function testXHR() {
+      const url = apiUrlInput.value;
+      addLog(`开始 XHR 测试...`, 'info');
+      addLog(`URL: ${url}`, 'info');
+
+      const xhr = new XMLHttpRequest();
+      const startTime = Date.now();
+
+      xhr.open('GET', url);
+
+      xhr.onload = function() {
+        const duration = Date.now() - startTime;
+        addLog(`XHR 响应状态: ${xhr.status} ${xhr.statusText}`, xhr.status === 200 ? 'success' : 'error');
+        addLog(`耗时: ${duration}ms`, 'info');
+        addLog(`响应数据: ${xhr.responseText.substring(0, 500)}...`, 'success');
+      };
+
+      xhr.onerror = function() {
+        addLog('XHR 请求失败', 'error');
+        addLog(`错误详情: ${xhr.status} ${xhr.statusText}`, 'error');
+      };
+
+      xhr.onabort = function() {
+        addLog('XHR 请求被中止', 'error');
+      };
+
+      xhr.ontimeout = function() {
+        addLog('XHR 请求超时', 'error');
+      };
+
+      xhr.timeout = 10000; // 10秒超时
+
+      addLog('发送 XHR 请求...', 'info');
+      xhr.send();
+    }
+
+    // 页面加载时自动测试
+    window.onload = function() {
+      addLog('页面已加载，点击按钮开始测试', 'info');
+      addLog('当前浏览器:', 'info');
+      addLog(`- User Agent: ${navigator.userAgent.substring(0, 100)}...`, 'info');
+
+      // 检查是否在本地环境
+      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        addLog('✓ 运行在本地环境', 'success');
+      } else {
+        addLog(`⚠️ 运行在: ${location.hostname}`, 'info');
+      }
+
+      // 自动测试一次
+      setTimeout(() => {
+        addLog('自动执行一次测试...', 'info');
+        testFetch();
+      }, 1000);
+    };
+  </script>
+</body>
+</html>

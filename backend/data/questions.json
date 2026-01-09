@@ -1,0 +1,38 @@
+[
+  {
+    "id": "q1",
+    "title": "React Hooks 的使用规则",
+    "content": "React Hooks 有两个主要的使用规则：<br><br>1. 只在最顶层使用 Hook<br>不要在循环、条件或嵌套函数中调用 Hook，确保总是在 React 函数的顶层调用 Hook。<br><br>2. 只在 React 函数中调用 Hook<br>不要在普通的 JavaScript 函数中调用 Hook。<br><br>为什么要有这些规则？<br>React 依赖于调用顺序来正确地将 Hook 和组件关联起来。如果在条件语句或循环中使用 Hook，可能会导致状态不一致的 Bug。",
+    "categoryId": "1767966254373",
+    "isFrequent": true,
+    "createdAt": "2025-01-09T00:00:00.000Z",
+    "updatedAt": "2025-01-09T00:00:00.000Z"
+  },
+  {
+    "id": "q2",
+    "title": "useEffect 的依赖数组",
+    "content": "useEffect 的第二个参数是依赖数组，它决定了 effect 何时重新执行：<br><br>1. 不传依赖数组：每次渲染后都会执行<br><code>useEffect(() => { /* effect */ })</code><br><br>2. 空数组：只在组件挂载和卸载时执行<br><code>useEffect(() => { /* effect */ }, [])</code><br><br>3. 传入依赖：依赖变化时执行<br><code>useEffect(() => { /* effect */ }, [count])</code><br><br>注意：依赖数组中的值必须是组件作用域内定义的值（props, state 等）。",
+    "categoryId": "1767966254373",
+    "isFrequent": true,
+    "createdAt": "2025-01-09T00:00:00.000Z",
+    "updatedAt": "2025-01-09T00:00:00.000Z"
+  },
+  {
+    "id": "q3",
+    "title": "TypeScript 类型断言",
+    "content": "TypeScript 提供了两种类型断言语法：<br><br>1. 尖括号语法<br><code>let someValue: any = 'this is a string';<br>let strLength: number = (&lt;string&gt;someValue).length;</code><br><br>2. as 语法（推荐）<br><code>let someValue: any = 'this is a string';<br>let strLength: number = (someValue as string).length;</code><br><br>注意：类型断言不会改变变量的类型，只是告诉 TypeScript 编译器你确信这个值的类型。",
+    "categoryId": "1767966254374",
+    "isFrequent": false,
+    "createdAt": "2025-01-09T00:00:00.000Z",
+    "updatedAt": "2025-01-09T00:00:00.000Z"
+  },
+  {
+    "id": "q4",
+    "title": "Next.js App Router 特性",
+    "content": "Next.js 13+ 的 App Router 带来了许多新特性：<br><br>1. 基于 React Server Components (RSC)<br>2. 更灵活的路由系统（支持并行路由和拦截路由）<br>3. 内置布局系统<br>4. 服务端组件和客户端组件分离<br>5. 更好的性能优化（Streaming）<br><br>使用 <code>'use client'</code> 指令来标记客户端组件。",
+    "categoryId": "1767966254375",
+    "isFrequent": true,
+    "createdAt": "2025-01-09T00:00:00.000Z",
+    "updatedAt": "2025-01-09T00:00:00.000Z"
+  }
+]
