@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm run build"
+  command = "npm install && npm run build"
   publish = ".next"
 
 [build.environment]
@@ -12,13 +12,6 @@
 [functions]
   node_bundler = "esbuild"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 [dev]
-  command = "pnpm run dev"
+  command = "npm run dev"
   port = 5000
-  targetPort = 5000
-  publish = ".next"
