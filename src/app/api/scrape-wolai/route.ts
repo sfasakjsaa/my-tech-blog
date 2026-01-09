@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { SearchClient, Config } from "coze-coding-dev-sdk"
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,32 +11,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 提取页面 ID
-    const pageId = url.split('/').pop()
-
-    const config = new Config()
-    const client = new SearchClient(config)
-
-    // 使用搜索来查找相关内容
-    const response = await client.advancedSearch(
-      `CSS 题库 ${pageId}`,
+    // 暂时禁用 Wolai 抓取功能
+    // 如果需要这个功能，可以集成联网搜索服务或其他抓取工具
+    return NextResponse.json(
       {
-        searchType: 'web',
-        count: 10,
-        sites: 'wolai.com',
-        needContent: true,
-        needUrl: true,
-        needSummary: true
-      }
+        success: false,
+        error: "Wolai 抓取功能暂时不可用，请手动添加题目",
+      },
+      { status: 503 }
     )
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        results: response.web_items || [],
-        summary: response.summary || ''
-      }
-    })
   } catch (error) {
     console.error("Scraping failed:", error)
     return NextResponse.json(

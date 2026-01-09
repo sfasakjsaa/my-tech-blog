@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { S3Storage } from "coze-coding-dev-sdk"
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 
-// 初始化对象存储
-const storage = new S3Storage({
-  endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL,
-  accessKey: "",
-  secretKey: "",
-  bucketName: process.env.COZE_BUCKET_NAME,
-  region: "cn-beijing",
+// 初始化 S3 客户端
+const s3Client = new S3Client({
+  region: process.env.S3_REGION || "us-east-1",
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+  },
 })
 
 // 允许的图片类型
@@ -27,6 +27,15 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File
+    const bucketName = process.env.S3_BUCKET_NAME
+
+    // 验证配置
+    if (!bucketName || !process.env.S3_ACCESS_KEY_ID || !process.env.S3_SECRET_ACCESS_KEY) {
+      return NextResponse.json(
+        { success: false, error: "S3 配置缺失，请检查环境变量" },
+        { status: 500 }
+      )
+    }
 
     // 验证文件是否存在
     if (!file) {
@@ -56,27 +65,27 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // 生成文件名：使用 UUID 前缀
+    // 生成文件名：使用时间戳前缀
     const fileName = `images/${Date.now()}_${file.name}`
 
-    // 上传到对象存储
-    const fileKey = await storage.uploadFile({
-      fileContent: buffer,
-      fileName: fileName,
-      contentType: file.type,
+    // 上传到 S3
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: fileName,
+      Body: buffer,
+      ContentType: file.type,
     })
 
-    // 生成签名 URL（有效期 7 天）
-    const imageUrl = await storage.generatePresignedUrl({
-      key: fileKey,
-      expireTime: 60 * 60 * 24 * 7, // 7 天
-    })
+    await s3Client.send(command)
+
+    // 构建公开访问 URL（根据你的 S3 配置）
+    const imageUrl = `https://${bucketName}.s3.${process.env.S3_REGION || "us-east-1"}.amazonaws.com/${fileName}`
 
     return NextResponse.json({
       success: true,
       data: {
         url: imageUrl,
-        key: fileKey,
+        key: fileName,
       },
     })
   } catch (error) {
