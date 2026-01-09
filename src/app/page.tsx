@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { Category } from "@/storage/database/shared/schema"
+import type { Category } from "@/lib/api"
 import HomePage from "@/app/page/HomePage"
 import QuestionBankPage from "@/app/page/QuestionBankPage"
 import InputDialog from "@/components/InputDialog"
 import ConfirmDialog from "@/components/ConfirmDialog"
+import { categoryApi } from "@/lib/api"
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<"home" | "questions">("home")
@@ -26,9 +27,8 @@ export default function Home() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const response = await fetch("/api/categories")
-        const result = await response.json()
-        if (result.success) {
+        const result = await categoryApi.getAll()
+        if (result.success && result.data) {
           setCategories(result.data)
           if (result.data.length > 0 && !selectedCategoryId) {
             setSelectedCategoryId(result.data[0].id)
@@ -52,15 +52,11 @@ export default function Home() {
       message: "确定要删除这个分类吗？该分类下的所有题目也将被删除。",
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/categories/${id}`, {
-            method: "DELETE",
-          })
-          const result = await response.json()
+          const result = await categoryApi.delete(id)
           if (result.success) {
             // 重新加载分类
-            const catRes = await fetch("/api/categories")
-            const catResult = await catRes.json()
-            if (catResult.success) {
+            const catResult = await categoryApi.getAll()
+            if (catResult.success && catResult.data) {
               setCategories(catResult.data)
               if (!catResult.data.find((c: Category) => c.id === selectedCategoryId)) {
                 setSelectedCategoryId(catResult.data.length > 0 ? catResult.data[0].id : "")
@@ -78,17 +74,11 @@ export default function Home() {
   // 新建分类
   const handleAddCategory = async (name: string) => {
     try {
-      const response = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      })
-      const result = await response.json()
+      const result = await categoryApi.create(name)
       if (result.success) {
         // 重新加载分类
-        const catRes = await fetch("/api/categories")
-        const catResult = await catRes.json()
-        if (catResult.success) {
+        const catResult = await categoryApi.getAll()
+        if (catResult.success && catResult.data) {
           setCategories(catResult.data)
           if (!selectedCategoryId && catResult.data.length > 0) {
             setSelectedCategoryId(catResult.data[0].id)

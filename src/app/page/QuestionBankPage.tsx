@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { Question } from "@/storage/database/shared/schema"
+import type { Question } from "@/lib/api"
 import RichTextEditor from "@/components/RichTextEditor"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import AlertModal from "@/components/AlertModal"
+import { questionApi } from "@/lib/api"
 
 interface QuestionBankPageProps {
   selectedCategoryId: string
@@ -45,15 +46,8 @@ export default function QuestionBankPage({
       console.log("[DEBUG] Loading questions for category:", selectedCategoryId)
       setLoading(true)
       try {
-        const params = new URLSearchParams()
-        params.append("categoryId", selectedCategoryId)
-        if (searchQuery) {
-          params.append("search", searchQuery)
-        }
-        const url = `/api/questions?${params.toString()}`
-        const response = await fetch(url)
-        const result = await response.json()
-        if (result.success) {
+        const result = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+        if (result.success && result.data) {
           console.log("[DEBUG] Loaded questions count:", result.data.length)
           setQuestions(result.data)
         }
@@ -125,15 +119,8 @@ export default function QuestionBankPage({
     const loadQuestions = async () => {
       setLoading(true)
       try {
-        const params = new URLSearchParams()
-        params.append("categoryId", selectedCategoryId)
-        if (searchQuery) {
-          params.append("search", searchQuery)
-        }
-        const url = `/api/questions?${params.toString()}`
-        const response = await fetch(url)
-        const result = await response.json()
-        if (result.success) {
+        const result = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+        if (result.success && result.data) {
           setQuestions(result.data)
         }
       } catch (error) {
@@ -173,23 +160,23 @@ export default function QuestionBankPage({
 
     setIsSubmittingQuestion(true)
     try {
-      const url = editingQuestion
-        ? `/api/questions/${editingQuestion.id}`
-        : "/api/questions"
-      const method = editingQuestion ? "PUT" : "POST"
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      let result
+      if (editingQuestion) {
+        result = await questionApi.update(editingQuestion.id, {
           title: questionTitle,
           content: questionContent,
           categoryId: selectedCategoryId,
           isFrequent: isFrequentQuestion,
-        }),
-      })
+        })
+      } else {
+        result = await questionApi.create({
+          title: questionTitle,
+          content: questionContent,
+          categoryId: selectedCategoryId,
+          isFrequent: isFrequentQuestion,
+        })
+      }
 
-      const result = await response.json()
       if (result.success) {
         setShowQuestionModal(false)
         setQuestionTitle("")
@@ -198,12 +185,8 @@ export default function QuestionBankPage({
         setEditingQuestion(null)
         showAlert(editingQuestion ? "题目更新成功" : "题目添加成功", "success")
         // 重新加载问题
-        const params = new URLSearchParams()
-        params.append("categoryId", selectedCategoryId)
-        const qUrl = `/api/questions?${params.toString()}`
-        const qRes = await fetch(qUrl)
-        const qResult = await qRes.json()
-        if (qResult.success) {
+        const qResult = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+        if (qResult.success && qResult.data) {
           setQuestions(qResult.data)
         }
       } else {
@@ -224,20 +207,13 @@ export default function QuestionBankPage({
       "确定要删除这个问题吗？",
       async () => {
         try {
-          const response = await fetch(`/api/questions/${id}`, {
-            method: "DELETE",
-          })
-          const result = await response.json()
+          const result = await questionApi.delete(id)
           if (result.success) {
             showAlert("题目删除成功", "success")
             closeConfirm()
             // 重新加载问题
-            const params = new URLSearchParams()
-            params.append("categoryId", selectedCategoryId)
-            const url = `/api/questions?${params.toString()}`
-            const qRes = await fetch(url)
-            const qResult = await qRes.json()
-            if (qResult.success) {
+            const qResult = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+            if (qResult.success && qResult.data) {
               setQuestions(qResult.data)
             }
           } else {

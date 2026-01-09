@@ -1,155 +1,231 @@
-# 部署指南
+# 阿真个人技术博客 - 部署指南
 
-## 🚀 部署到 Netlify（推荐）
+## 项目架构
 
-Netlify 是一个功能强大的静态网站托管平台，支持 Next.js 的服务端渲染。
+本项目采用前后端分离架构：
+- **前端**: Next.js 16 + React 19 + TypeScript + Tailwind CSS 4
+- **后端**: Spring Boot 3.2.1 + MySQL 8 + Spring Data JPA + Flyway
 
-### 第一步：注册账号
+## 部署步骤
 
-1. 访问 https://www.netlify.com
-2. 使用 GitHub、GitLab 或 Bitbucket 账号登录
+### 一、后端部署
 
-### 第二步：推送代码到 GitHub
+#### 1. 环境准备
 
-1. 在 GitHub 上创建一个新仓库
-2. 初始化本地 git（如果还没有）：
-```bash
-git init
-git add .
-git commit -m "Initial commit"
+在本地或云端服务器准备以下环境：
+- Java 17 或更高版本
+- Maven 3.6+
+- MySQL 8.0 或更高版本
+
+#### 2. 数据库配置
+
+创建 MySQL 数据库：
+
+```sql
+CREATE DATABASE azhen_blog CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-3. 添加远程仓库并推送：
-```bash
-git remote add origin https://github.com/your-username/your-repo-name.git
-git branch -M main
-git push -u origin main
+#### 3. 配置后端
+
+修改 `backend/src/main/resources/application.properties`:
+
+```properties
+# 数据库配置
+spring.datasource.url=jdbc:mysql://localhost:3306/azhen_blog
+spring.datasource.username=your_username
+spring.datasource.password=your_password
+
+# Flyway 配置（自动初始化数据库表）
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=true
 ```
 
-### 第三步：在 Netlify 导入项目
+#### 4. 部署到 Render（推荐）
 
-1. 登录 Netlify 后，点击 "Add new site" → "Import an existing project"
-2. 选择 GitHub 作为持续部署提供商
-3. 授权 Netlify 访问你的 GitHub 仓库
-4. 选择你要部署的仓库
+1. 在 Render.com 创建新账户
+2. 创建 Web Service：
+   - 连接 GitHub 仓库
+   - 选择 backend 目录
+   - 构建命令: `bash deploy.sh`
+   - 启动命令: `java -jar target/blog-backend-1.0.0.jar`
+3. 添加环境变量：
+   - `DATABASE_URL`: MySQL 数据库连接字符串
+   - `SPRING_DATASOURCE_USERNAME`: 数据库用户名
+   - `SPRING_DATASOURCE_PASSWORD`: 数据库密码
 
-### 第四步：配置构建设置
+#### 5. 获取后端 URL
 
-Netlify 通常会自动检测 Next.js 项目，但你需要确认以下配置：
+部署完成后，Render 会提供一个 URL，例如：
+```
+https://azhen-blog-backend.onrender.com
+```
 
-- **Build command**: `pnpm run build`
-- **Publish directory**: `.next`
-- **Node version**: `18`
+### 二、前端部署
 
-如果自动检测失败，可以手动在 "Site settings" → "Build & deploy" 中配置。
+#### 1. 配置环境变量
 
-### 第五步：点击部署
+在项目根目录创建 `.env.local`:
 
-1. 点击 "Deploy site" 按钮
-2. Netlify 会自动构建和部署
-3. 大约 2-3 分钟即可完成
-4. 部署成功后，你会获得一个 `.netlify.app` 域名
+```env
+# 后端 API 地址（修改为你的后端地址）
+NEXT_PUBLIC_API_URL=https://azhen-blog-backend.onrender.com
+```
 
-### 第六步：配置环境变量（如果需要）
+#### 2. 部署到 Netlify（推荐）
 
-如果项目需要环境变量（如数据库连接），在 Netlify 项目设置中添加：
+**方法 A: 通过 Netlify 网站部署**
 
-1. 进入项目 → Site settings → Environment variables
-2. 点击 "Add a variable"
-3. 添加所需的环境变量：
-   - `DATABASE_URL`: 数据库连接字符串
-   - `S3_BUCKET_NAME`: S3 存储桶名称
-   - `S3_ACCESS_KEY_ID`: S3 访问密钥
-   - `S3_SECRET_ACCESS_KEY`: S3 密钥
-   - `S3_ENDPOINT`: S3 服务端点（如果不是 AWS）
-   - 等等...
+1. 在 Netlify.com 创建新账户
+2. 点击 "Add new site" -> "Import an existing project"
+3. 连接 GitHub 仓库
+4. 构建设置：
+   - Build command: `npm run build`
+   - Publish directory: `.next` (注意：Next.js 16 的输出目录)
+5. 在 "Site settings" -> "Build & deploy" -> "Environment variables" 中添加：
+   - `NEXT_PUBLIC_API_URL`: 你的后端地址
+6. 点击 "Deploy site"
 
-4. 点击 "Save"
-5. 重新部署项目（触发新的构建）
-
-## 🌟 自定义域名（可选）
-
-### 免费域名
-Netlify 会提供免费域名：`your-project.netlify.app`
-
-### 使用自己的域名
-1. 购买域名（如阿里云、腾讯云、Namecheap 等）
-2. 在 Netlify 项目设置中 → Domain management → Add custom domain
-3. 输入你的域名并按照提示配置 DNS 记录
-4. Netlify 会自动配置 SSL 证书（Let's Encrypt）
-
-## 📊 部署特性
-
-- ✅ 全球 CDN 加速
-- ✅ 自动 HTTPS
-- ✅ 自动持续部署（推送代码自动部署）
-- ✅ 预览部署（每个 Pull Request 自动预览）
-- ✅ Serverless Functions 支持
-- ✅ 表单处理
-- ✅ 免费额度充足
-
-## 🔄 更新项目
-
-部署后，只需：
-1. 修改代码
-2. 提交到 GitHub
-3. Netlify 自动检测并重新部署
-
-## 📝 注意事项
-
-- Netlify 免费计划支持：
-  - 每月 100GB 带宽
-  - 每月 300 分钟构建时间
-  - 无限站点
-  - 无限 HTTP/HTTPS 请求
-
-- 如果项目使用数据库，建议使用：
-  - Supabase（免费）
-  - Neon（PostgreSQL，免费）
-  - Railway（PostgreSQL，免费）
-
-- Next.js 在 Netlify 上需要使用 `@netlify/plugin-nextjs` 插件，项目已配置在 `netlify.toml` 中
-
-## ❓ 常见问题
-
-### Q: 部署失败怎么办？
-A: 检查 Netlify 部署日志，点击具体部署 → Deploy log 查看错误信息
-
-### Q: 如何查看部署日志？
-A: 在 Netlify 项目页面 → Deploys → 点击具体部署 → 查看 Deploy log
-
-### Q: 如何回滚到之前版本？
-A: 在 Netlify 项目页面 → Deploys → 找到之前的部署 → 点击 "Publish deploy"
-
-### Q: 如何设置域名？
-A: 在 Netlify 项目设置 → Domain management → Add custom domain
-
-### Q: Next.js API 路由如何工作？
-A: Netlify 的 Next.js 插件会自动将 API 路由转换为 Netlify Functions，无需额外配置
-
-### Q: 如何配置环境变量？
-A: 在 Site settings → Environment variables 中添加，区分 "Build" 和 "Development" 环境
-
-## 🚀 使用 Netlify CLI（可选）
-
-如果你更喜欢命令行操作，可以安装 Netlify CLI：
+**方法 B: 使用 Netlify CLI**
 
 ```bash
-# 全局安装 Netlify CLI
-pnpm add -g netlify-cli
+# 安装 Netlify CLI
+npm install -g netlify-cli
 
-# 登录
+# 登录 Netlify
 netlify login
 
-# 初始化项目
+# 初始化部署
 netlify init
 
-# 手动部署
+# 构建并部署
 netlify deploy --prod
 ```
 
-## 📚 更多资源
+#### 3. 配置 Next.js 输出（可选）
 
-- Netlify 官方文档：https://docs.netlify.com
-- Netlify Next.js 集成：https://docs.netlify.com/integrations/frameworks/nextjs/
-- Next.js 部署指南：https://nextjs.org/docs/deployment
+为了更好的性能，可以修改 `next.config.ts` 使用静态导出：
+
+```typescript
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  output: 'export',
+  images: {
+    unoptimized: true
+  }
+}
+
+export default nextConfig
+```
+
+### 三、验证部署
+
+1. 访问前端 URL，检查页面是否正常加载
+2. 尝试添加分类和题目，验证前后端通信
+3. 检查浏览器控制台，确保没有错误
+
+## 常见问题
+
+### 1. CORS 错误
+
+确保后端已配置 CORS，允许前端域名访问：
+
+```java
+@CorsConfiguration
+@Configuration
+public class CorsConfig {
+    // 已在项目中配置
+}
+```
+
+### 2. API 调用失败
+
+检查：
+- `.env.local` 中的 `NEXT_PUBLIC_API_URL` 是否正确
+- 后端服务是否正常运行
+- 网络连接是否正常
+
+### 3. 数据库连接失败
+
+检查：
+- MySQL 数据库是否已创建
+- 数据库用户名和密码是否正确
+- Render 等平台的数据库连接配置是否正确
+
+### 4. 图片上传功能
+
+当前版本暂时禁用了图片上传功能。如需启用，需要：
+1. 配置后端的 S3 存储服务
+2. 实现上传 API
+3. 前端添加上传组件
+
+## 本地开发
+
+### 启动后端
+
+```bash
+cd backend
+bash deploy.sh
+```
+
+后端将在 http://localhost:8080 启动
+
+### 启动前端
+
+```bash
+# 安装依赖
+pnpm install
+
+# 启动开发服务器
+pnpm dev
+```
+
+前端将在 http://localhost:5000 启动
+
+## 项目结构
+
+```
+.
+├── src/
+│   ├── app/              # Next.js App Router 页面
+│   │   ├── page.tsx      # 主页面
+│   │   ├── layout.tsx    # 布局
+│   │   └── globals.css   # 全局样式
+│   ├── components/       # React 组件
+│   │   ├── RichTextEditor.tsx
+│   │   ├── AlertModal.tsx
+│   │   ├── ConfirmDialog.tsx
+│   │   └── InputDialog.tsx
+│   └── lib/
+│       └── api.ts        # API 客户端
+├── backend/              # Spring Boot 后端
+│   ├── src/
+│   │   └── main/
+│   │       ├── java/
+│   │       └── resources/
+│   │           └── db/migration/  # Flyway 数据库迁移
+│   ├── pom.xml
+│   └── deploy.sh
+├── package.json
+├── .env.local           # 前端环境变量
+└── .coze                # Coze 项目配置
+```
+
+## 技术栈
+
+### 前端
+- Next.js 16 (App Router)
+- React 19
+- TypeScript 5
+- Tailwind CSS 4
+- 原生 contenteditable 实现富文本编辑
+
+### 后端
+- Spring Boot 3.2.1
+- Spring Data JPA
+- Flyway (数据库迁移)
+- MySQL 8+
+
+## 联系方式
+
+如有问题，请联系项目维护者。
