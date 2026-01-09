@@ -1,5 +1,5 @@
 import { eq, SQL, and, or, like, asc, desc } from "drizzle-orm"
-import { getDb } from "coze-coding-dev-sdk"
+import { getDb } from "@/lib/db"
 import {
   questions,
   insertQuestionSchema,
