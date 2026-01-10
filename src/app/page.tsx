@@ -322,43 +322,35 @@ export default function Home() {
                 <span className="font-medium">首页</span>
               </span>
             </button>
-            <div className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex items-center justify-between ${
-              currentPage === "questions"
-                ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
-                : "text-gray-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600"
-            }`}>
-              <div
-                className="flex-1 flex items-center gap-3 cursor-pointer"
-                onClick={() => {
-                  setCurrentPage("questions")
-                  setIsCategoryDropdownOpen(false)
-                }}
-              >
+
+            <button
+              onClick={() => setCurrentPage("questions")}
+              className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex items-center justify-between ${
+                currentPage === "questions"
+                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
+                  : "text-gray-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600"
+              }`}
+            >
+              <div className="flex items-center gap-3">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">题库</span>
-                  {selectedCategoryId && (
-                    <span className="text-sm opacity-80">
-                      ({categories.find(c => c.id === selectedCategoryId)?.name || ""})
-                    </span>
-                  )}
-                </div>
+                <span className="font-medium">题库</span>
               </div>
               <svg
-                className={`w-4 h-4 transition-transform cursor-pointer hover:scale-110 ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 onClick={(e) => {
+                  e.preventDefault()
                   e.stopPropagation()
                   setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
                 }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </div>
+            </button>
 
             {/* 移动端分类下拉列表 */}
             {isCategoryDropdownOpen && !loading && (
@@ -382,6 +374,7 @@ export default function Home() {
                     <span className="text-xs text-gray-500 mr-2">({categoryQuestionCounts[category.id] || 0})</span>
                     <button
                       onClick={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         if (!isAuthenticated) {
                           showAlert("请先登录", "warning")
@@ -402,9 +395,9 @@ export default function Home() {
                   </div>
                 ))}
                 </div>
-                {/* 新建分类按钮 */}
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault()
                     if (!isAuthenticated) {
                       showAlert("请先登录", "warning")
                       return
@@ -481,15 +474,15 @@ export default function Home() {
 
           {/* 题库和分类 */}
           <div className="space-y-1">
-            <div className={`w-full text-left px-5 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-between ${
-              currentPage === "questions"
-                ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
-                : "text-gray-600 hover:bg-gradient-to-r hover:from-indigo-5050 hover:to-purple-50 hover:text-indigo-600"
-            }`}>
-              <span
-                className="flex-1 flex items-center gap-3 cursor-pointer"
-                onClick={() => setCurrentPage("questions")}
-              >
+            <button
+              onClick={() => setCurrentPage("questions")}
+              className={`w-full text-left px-5 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-between ${
+                currentPage === "questions"
+                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
+                  : "text-gray-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600"
+              }`}
+            >
+              <div className="flex items-center gap-3">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
@@ -501,20 +494,21 @@ export default function Home() {
                     </span>
                   )}
                 </div>
-              </span>
+              </div>
               <svg
-                className={`w-4 h-4 transition-transform cursor-pointer hover:scale-110 ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 onClick={(e) => {
+                  e.preventDefault()
                   e.stopPropagation()
                   setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
                 }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </div>
+            </button>
 
             {/* 分类下拉列表 */}
             {isCategoryDropdownOpen && !loading && (
