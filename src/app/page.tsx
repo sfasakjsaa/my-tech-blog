@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { Category } from "@/lib/api"
 import HomePage from "@/app/page/HomePage"
 import QuestionBankPage from "@/app/page/QuestionBankPage"
@@ -35,6 +35,8 @@ export default function Home() {
     message: "",
   })
 
+  const hasCheckedAuth = useRef(false)
+
   const showAlert = (message: string, type: "success" | "error" | "info" | "warning" = "info", title?: string) => {
     setAlertModal({ isOpen: true, title, message, type })
   }
@@ -45,10 +47,13 @@ export default function Home() {
 
   // 检查是否需要显示认证弹窗（只在初始化时检查一次）
   useEffect(() => {
-    const authStatus = localStorage.getItem("authStatus")
-    // 如果没有登录记录，显示认证弹窗
-    if (!authStatus) {
-      setShowAuthModal(true)
+    if (!hasCheckedAuth.current) {
+      hasCheckedAuth.current = true
+      const authStatus = localStorage.getItem("authStatus")
+      // 如果没有登录记录，显示认证弹窗
+      if (!authStatus) {
+        setShowAuthModal(true)
+      }
     }
   }, [])
 
