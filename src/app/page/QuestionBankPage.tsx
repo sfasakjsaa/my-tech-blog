@@ -138,6 +138,10 @@ export default function QuestionBankPage({
 
   // 新增问题
   const handleAddQuestion = () => {
+    if (isGuest) {
+      showAlert("游客无法操作，请登录", "warning")
+      return
+    }
     setEditingQuestion(null)
     setQuestionTitle("")
     setQuestionContent("")
@@ -147,6 +151,10 @@ export default function QuestionBankPage({
 
   // 编辑问题
   const handleEditQuestion = (question: Question) => {
+    if (isGuest) {
+      showAlert("游客无法操作，请登录", "warning")
+      return
+    }
     setEditingQuestion(question)
     setQuestionTitle(question.title)
     setQuestionContent(question.content)
@@ -227,6 +235,10 @@ export default function QuestionBankPage({
 
   // 删除问题
   const handleDeleteQuestion = async (id: string) => {
+    if (isGuest) {
+      showAlert("游客无法操作，请登录", "warning")
+      return
+    }
     showConfirm(
       "删除题目",
       "确定要删除这个问题吗？",
