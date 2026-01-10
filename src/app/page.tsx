@@ -6,9 +6,14 @@ import HomePage from "@/app/page/HomePage"
 import QuestionBankPage from "@/app/page/QuestionBankPage"
 import InputDialog from "@/components/InputDialog"
 import ConfirmDialog from "@/components/ConfirmDialog"
+import AlertModal from "@/components/AlertModal"
+import AuthModal from "@/components/AuthModal"
 import { categoryApi } from "@/lib/api"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function Home() {
+  const { isAuthenticated, isGuest, login, loginAsGuest, logout } = useAuth()
+
   const [currentPage, setCurrentPage] = useState<"home" | "questions">("home")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
@@ -16,12 +21,27 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
   const [isInputDialogOpen, setIsInputDialogOpen] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({
     isOpen: false,
     title: "",
     message: "",
     onConfirm: () => {},
   })
+
+  // Alert Modal state
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title?: string; message: string; type?: "success" | "error" | "info" | "warning" }>({
+    isOpen: false,
+    message: "",
+  })
+
+  const showAlert = (message: string, type: "success" | "error" | "info" | "warning" = "info", title?: string) => {
+    setAlertModal({ isOpen: true, title, message, type })
+  }
+
+  const closeAlert = () => {
+    setAlertModal({ isOpen: false, message: "" })
+  }
 
   // 加载分类
   useEffect(() => {
@@ -44,8 +64,37 @@ export default function Home() {
     loadCategories()
   }, [])
 
+  // 登录处理
+  const handleLogin = (password: string) => {
+    if (login(password)) {
+      setShowAuthModal(false)
+      showAlert("登录成功！现在可以操作了", "success", "欢迎回来")
+    } else {
+      showAlert("密码错误，请重试", "error", "登录失败")
+    }
+  }
+
+  // 游客访问处理
+  const handleGuestAccess = () => {
+    loginAsGuest()
+    setShowAuthModal(false)
+    showAlert("游客模式：只能查看，无法进行操作", "info", "游客访问")
+  }
+
+  // 退出登录
+  const handleLogout = () => {
+    logout()
+    setShowAuthModal(true)
+  }
+
   // 删除分类
   const handleDeleteCategory = async (id: string) => {
+    // 认证检查
+    if (isGuest) {
+      showAlert("游客无法操作，请登录", "warning")
+      return
+    }
+
     setConfirmDialog({
       isOpen: true,
       title: "删除分类",
@@ -54,6 +103,7 @@ export default function Home() {
         try {
           const result = await categoryApi.delete(id)
           if (result.success) {
+            showAlert("分类删除成功", "success")
             // 重新加载分类
             const catResult = await categoryApi.getAll()
             if (catResult.success && catResult.data) {
@@ -62,9 +112,30 @@ export default function Home() {
                 setSelectedCategoryId(catResult.data.length > 0 ? catResult.data[0].id : "")
               }
             }
+          } else {
+            showAlert("删除失败，请重试", "error")
           }
         } catch (error) {
           console.error("Error deleting category:", error)
+          const errorMessage = error instanceof Error ? error.message : "未知错误"
+          // 如果是404错误，说明分类已不存在
+          if (errorMessage.includes("404") || errorMessage.includes("not found")) {
+            showAlert("分类不存在，列表已刷新", "warning")
+          } else {
+            showAlert("删除失败，请重试", "error")
+          }
+          // 无论如何都刷新列表
+          try {
+            const catResult = await categoryApi.getAll()
+            if (catResult.success && catResult.data) {
+              setCategories(catResult.data)
+              if (!catResult.data.find((c: Category) => c.id === selectedCategoryId)) {
+                setSelectedCategoryId(catResult.data.length > 0 ? catResult.data[0].id : "")
+              }
+            }
+          } catch (e) {
+            console.error("Failed to refresh categories:", e)
+          }
         }
         setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} })
       }
@@ -73,9 +144,16 @@ export default function Home() {
 
   // 新建分类
   const handleAddCategory = async (name: string) => {
+    // 认证检查
+    if (isGuest) {
+      showAlert("游客无法操作，请登录", "warning")
+      return
+    }
+
     try {
       const result = await categoryApi.create(name)
       if (result.success) {
+        showAlert("分类添加成功", "success")
         // 重新加载分类
         const catResult = await categoryApi.getAll()
         if (catResult.success && catResult.data) {
@@ -84,9 +162,12 @@ export default function Home() {
             setSelectedCategoryId(catResult.data[0].id)
           }
         }
+      } else {
+        showAlert("添加失败，请重试", "error")
       }
     } catch (error) {
       console.error("Error adding category:", error)
+      showAlert("添加失败，请重试", "error")
     }
   }
 
@@ -213,7 +294,10 @@ export default function Home() {
                         e.stopPropagation()
                         handleDeleteCategory(category.id)
                       }}
-                      className="md:opacity-0 md:group-hover:opacity-100 ml-2 text-red-500 hover:text-red-700 transition-opacity"
+                      disabled={isGuest}
+                      className={`md:opacity-0 md:group-hover:opacity-100 ml-2 transition-opacity ${
+                        isGuest ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                      }`}
                       title="删除分类"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,9 +310,16 @@ export default function Home() {
                 {/* 新建分类按钮 */}
                 <button
                   onClick={() => {
+                    if (isGuest) {
+                      showAlert("游客无法操作，请登录", "warning")
+                      return
+                    }
                     setIsInputDialogOpen(true)
                   }}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors w-full mt-2 border-t border-gray-100 pt-3"
+                  disabled={isGuest}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors w-full mt-2 border-t border-gray-100 pt-3 ${
+                    isGuest ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600 hover:bg-purple-50'
+                  }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -237,6 +328,21 @@ export default function Home() {
                 </button>
               </div>
             )}
+
+            {/* 移动端登录/退出按钮 */}
+            <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+              {isAuthenticated && (
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span className="font-medium">退出登录</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -350,7 +456,10 @@ export default function Home() {
                         e.stopPropagation()
                         handleDeleteCategory(category.id)
                       }}
-                      className="opacity-0 group-hover:opacity-100 ml-2 text-red-500 hover:text-red-700 transition-opacity"
+                      disabled={isGuest}
+                      className={`opacity-0 group-hover:opacity-100 ml-2 transition-opacity ${
+                        isGuest ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                      }`}
                       title="删除分类"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -361,8 +470,17 @@ export default function Home() {
                 ))}
                 {/* 新建分类按钮 */}
                 <button
-                  onClick={() => setIsInputDialogOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors w-full"
+                  onClick={() => {
+                    if (isGuest) {
+                      showAlert("游客无法操作，请登录", "warning")
+                      return
+                    }
+                    setIsInputDialogOpen(true)
+                  }}
+                  disabled={isGuest}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors w-full ${
+                    isGuest ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600 hover:bg-purple-50'
+                  }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -370,6 +488,21 @@ export default function Home() {
                   新建分类
                 </button>
               </div>
+            )}
+          </div>
+
+          {/* 登录/退出按钮 */}
+          <div className="px-5 pb-5 pt-4 border-t border-gray-100">
+            {isAuthenticated && (
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className="font-medium">退出登录</span>
+              </button>
             )}
           </div>
         </div>
@@ -422,6 +555,22 @@ export default function Home() {
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} })}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onClose={closeAlert}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onGuestAccess={handleGuestAccess}
+        onLogin={handleLogin}
       />
     </div>
   )

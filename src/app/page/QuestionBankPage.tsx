@@ -5,8 +5,8 @@ import type { Question } from "@/lib/api"
 import RichTextEditor from "@/components/RichTextEditor"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import AlertModal from "@/components/AlertModal"
-import AuthModal from "@/components/AuthModal"
 import { questionApi } from "@/lib/api"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface QuestionBankPageProps {
   selectedCategoryId: string
@@ -21,64 +21,13 @@ export default function QuestionBankPage({
   categories,
   onOpenInputDialog
 }: QuestionBankPageProps) {
+  const { isAuthenticated, isGuest, login, loginAsGuest } = useAuth()
+
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(propSelectedCategoryId)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<"all" | "frequent" | "non-frequent">("all")
-
-  // 认证状态
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isGuest, setIsGuest] = useState(false)
-  const [showAuthModal, setShowAuthModal] = useState(false)
-
-  // 页面加载时检查认证状态
-  useEffect(() => {
-    const authStatus = localStorage.getItem("authStatus")
-    if (authStatus === "authenticated") {
-      setIsAuthenticated(true)
-    } else if (authStatus === "guest") {
-      setIsGuest(true)
-    } else {
-      // 未登录，显示认证弹窗
-      setShowAuthModal(true)
-    }
-  }, [])
-
-  // 登录处理
-  const handleLogin = (password: string) => {
-    if (password === "lyz134679") {
-      setIsAuthenticated(true)
-      setIsGuest(false)
-      localStorage.setItem("authStatus", "authenticated")
-      setShowAuthModal(false)
-      showAlert("登录成功！现在可以操作了", "success", "欢迎回来")
-    } else {
-      showAlert("密码错误，请重试", "error", "登录失败")
-    }
-  }
-
-  // 游客访问处理
-  const handleGuestAccess = () => {
-    setIsGuest(true)
-    setIsAuthenticated(false)
-    localStorage.setItem("authStatus", "guest")
-    setShowAuthModal(false)
-    showAlert("游客模式：只能查看，无法进行操作", "info", "游客访问")
-  }
-
-  // 重新登录
-  const handleReLogin = () => {
-    setShowAuthModal(true)
-  }
-
-  // 退出登录
-  const handleLogout = () => {
-    localStorage.removeItem("authStatus")
-    setIsAuthenticated(false)
-    setIsGuest(false)
-    setShowAuthModal(true)
-  }
 
   // 当 prop 变化时更新本地状态
   useEffect(() => {
@@ -413,22 +362,6 @@ export default function QuestionBankPage({
           >
             新增题目
           </button>
-          {isGuest && (
-            <button
-              onClick={handleReLogin}
-              className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium text-base flex-shrink-0"
-            >
-              登录
-            </button>
-          )}
-          {isAuthenticated && (
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-base flex-shrink-0"
-            >
-              退出
-            </button>
-          )}
         </div>
       </div>
 
@@ -570,13 +503,6 @@ export default function QuestionBankPage({
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
-      />
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onGuestAccess={handleGuestAccess}
-        onLogin={handleLogin}
       />
     </div>
   )
