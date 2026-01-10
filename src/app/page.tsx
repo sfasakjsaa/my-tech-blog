@@ -359,7 +359,7 @@ export default function Home() {
             {/* 移动端分类下拉列表 */}
             {isCategoryDropdownOpen && !loading && (
               <div className="ml-4 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 p-2">
-                <div className="space-y-1 max-h-[70vh] overflow-y-auto">
+                <div className="space-y-1 max-h-[40vh] overflow-y-auto">
                   {categories.map((category) => (
                   <div
                     key={category.id}
