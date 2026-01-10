@@ -11,15 +11,16 @@ const CONFIG = {
   MAX_TOTAL_SIZE: 50 * 1024 * 1024, // 50MB
   // 最大文件数量
   MAX_FILE_COUNT: 100,
-  // 压缩后的最大宽度
+  // 最大图片宽度
   MAX_IMAGE_WIDTH: 1920,
-  // 压缩后的最大高度
+  // 最大图片高度
   MAX_IMAGE_HEIGHT: 1080,
-  // 压缩质量 (0-100)
+  // JPEG 压缩质量 (0-100)
   JPEG_QUALITY: 85,
+  // WebP 压缩质量 (0-100)
   WEBP_QUALITY: 80,
-  // 上传目录
-  UPLOAD_DIR: path.join(process.cwd(), 'public', 'uploads'),
+  // 上传目录（使用临时目录，通过 API 访问）
+  UPLOAD_DIR: path.join('/tmp', 'uploads'),
 }
 
 // 支持的图片类型
@@ -197,8 +198,8 @@ export async function POST(request: Request) {
     // 保存文件
     await writeFile(filePath, buffer)
 
-    // 返回访问 URL
-    const url = `/uploads/${fileName}`
+    // 返回访问 URL（使用 API 路由访问）
+    const url = `/api/images/${fileName}`
 
     return NextResponse.json({
       success: true,
