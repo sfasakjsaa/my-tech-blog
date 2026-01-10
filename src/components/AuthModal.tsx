@@ -6,10 +6,18 @@ interface AuthModalProps {
   onGuestAccess: () => void
   onLogin: (password: string) => void
   isOpen: boolean
+  loginError?: string
 }
 
-export default function AuthModal({ onGuestAccess, onLogin, isOpen }: AuthModalProps) {
+export default function AuthModal({ onGuestAccess, onLogin, isOpen, loginError }: AuthModalProps) {
   const [password, setPassword] = useState('')
+
+  // 弹窗关闭时清空密码
+  useEffect(() => {
+    if (!isOpen) {
+      setPassword('')
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -55,8 +63,15 @@ export default function AuthModal({ onGuestAccess, onLogin, isOpen }: AuthModalP
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="输入密码获取操作权限"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-all ${
+                loginError
+                  ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                  : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'
+              }`}
             />
+            {loginError && (
+              <p className="mt-2 text-sm text-red-600 font-medium">{loginError}</p>
+            )}
           </div>
 
           <button

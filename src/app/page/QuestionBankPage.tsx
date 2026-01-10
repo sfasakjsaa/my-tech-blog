@@ -13,13 +13,15 @@ interface QuestionBankPageProps {
   categoryName: string
   categories: any[]
   onOpenInputDialog: () => void
+  onShowAuthModal?: () => void
 }
 
 export default function QuestionBankPage({
   selectedCategoryId: propSelectedCategoryId,
   categoryName,
   categories,
-  onOpenInputDialog
+  onOpenInputDialog,
+  onShowAuthModal
 }: QuestionBankPageProps) {
   const { isAuthenticated, isGuest, login, loginAsGuest } = useAuth()
 
@@ -374,6 +376,21 @@ export default function QuestionBankPage({
           >
             新增题目
           </button>
+          {isAuthenticated ? (
+            <button
+              onClick={logout}
+              className="px-6 py-2 rounded-lg font-medium text-base flex-shrink-0 bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+            >
+              退出登录
+            </button>
+          ) : !isAuthenticated && onShowAuthModal && (
+            <button
+              onClick={onShowAuthModal}
+              className="px-6 py-2 rounded-lg font-medium text-base flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-colors"
+            >
+              登录
+            </button>
+          )}
         </div>
       </div>
 
