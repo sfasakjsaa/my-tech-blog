@@ -2,6 +2,27 @@ import { NextResponse } from 'next/server'
 import { S3Storage } from 'coze-coding-dev-sdk'
 
 export async function POST(request: Request) {
+  // 检查环境变量是否配置
+  if (!process.env.COZE_BUCKET_ENDPOINT_URL || !process.env.COZE_BUCKET_NAME) {
+    console.error('Missing environment variables:', {
+      endpoint: !!process.env.COZE_BUCKET_ENDPOINT_URL,
+      bucket: !!process.env.COZE_BUCKET_NAME,
+    })
+    return NextResponse.json(
+      {
+        success: false,
+        error: '对象存储未配置，请联系管理员设置环境变量',
+        debug: process.env.NODE_ENV === 'development' ? {
+          missing: [
+            !process.env.COZE_BUCKET_ENDPOINT_URL ? 'COZE_BUCKET_ENDPOINT_URL' : null,
+            !process.env.COZE_BUCKET_NAME ? 'COZE_BUCKET_NAME' : null,
+          ].filter(Boolean)
+        } : undefined
+      },
+      { status: 500 }
+    )
+  }
+
   // 初始化对象存储（确保环境变量已加载）
   const storage = new S3Storage({
     endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL,
