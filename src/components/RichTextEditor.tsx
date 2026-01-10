@@ -7,6 +7,7 @@ interface RichTextEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   showToolbar?: boolean
+  readonly?: boolean
   onError?: (message: string, type?: "error" | "info" | "warning" | "success") => void
   maxHeight?: string
 }
@@ -16,6 +17,7 @@ export default function RichTextEditor({
   onChange,
   placeholder = "请输入内容...",
   showToolbar = true,
+  readonly = false,
   onError,
   maxHeight,
 }: RichTextEditorProps) {
@@ -68,22 +70,28 @@ export default function RichTextEditor({
       const result = await response.json()
 
       if (result.success) {
-        // 在编辑器中插入可删除的图片
+        // 在编辑器中插入图片，只在编辑模式下显示删除按钮
         const imageUrl = result.data.url
         const imageId = `img-${Date.now()}`
+
+        // 只在非只读模式下显示删除按钮
+        const deleteButton = readonly ? '' : `
+          <button
+            type="button"
+            onclick="this.parentElement.remove()"
+            class="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer"
+            contenteditable="false"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        `
+
         const imageWrapper = `
           <div class="image-wrapper relative inline-block" data-id="${imageId}">
             <img src="${imageUrl}" alt="上传的图片" style="max-width: 100%; height: auto;" />
-            <button
-              type="button"
-              onclick="this.parentElement.remove()"
-              class="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer"
-              contenteditable="false"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            ${deleteButton}
           </div>
         `
 
@@ -281,7 +289,7 @@ export default function RichTextEditor({
       {/* Editor Content */}
       <div
         ref={editorRef}
-        contentEditable={showToolbar}
+        contentEditable={!readonly && showToolbar}
         onInput={handleInput}
         className={`p-4 focus:outline-none prose prose-sm max-w-none rich-editor-content overflow-auto ${maxHeight ? 'max-h-[' + maxHeight + ']' : 'min-h-[300px]'}`}
         suppressContentEditableWarning

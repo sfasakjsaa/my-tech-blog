@@ -138,6 +138,22 @@ export default function QuestionBankPage({
     loadQuestions()
   }, [selectedCategoryId, searchQuery])
 
+  // 清理内容中的图片删除按钮（用于保存时）
+  const cleanContentForSave = (html: string): string => {
+    // 创建临时 DOM 来解析 HTML
+    if (typeof window !== 'undefined') {
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = html
+
+      // 移除所有图片的删除按钮
+      const deleteButtons = tempDiv.querySelectorAll('.image-wrapper button')
+      deleteButtons.forEach(btn => btn.remove())
+
+      return tempDiv.innerHTML
+    }
+    return html
+  }
+
   // 新增问题
   const handleAddQuestion = () => {
     if (!isAuthenticated) {
@@ -173,18 +189,21 @@ export default function QuestionBankPage({
 
     setIsSubmittingQuestion(true)
     try {
+      // 清理内容中的图片删除按钮
+      const cleanContent = cleanContentForSave(questionContent)
+
       let result
       if (editingQuestion) {
         result = await questionApi.update(editingQuestion.id, {
           title: questionTitle,
-          content: questionContent,
+          content: cleanContent,
           categoryId: selectedCategoryId,
           isFrequent: isFrequentQuestion,
         })
       } else {
         result = await questionApi.create({
           title: questionTitle,
-          content: questionContent,
+          content: cleanContent,
           categoryId: selectedCategoryId,
           isFrequent: isFrequentQuestion,
         })
