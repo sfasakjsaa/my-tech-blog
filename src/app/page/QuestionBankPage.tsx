@@ -138,15 +138,14 @@ export default function QuestionBankPage({
     loadQuestions()
   }, [selectedCategoryId, searchQuery])
 
-  // 清理内容中的图片删除按钮（用于保存时）
-  const cleanContentForSave = (html: string): string => {
-    // 创建临时 DOM 来解析 HTML
+  // 清理内容中的图片删除按钮（用于显示）
+  const cleanContentForDisplay = (html: string): string => {
     if (typeof window !== 'undefined') {
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
 
       // 移除所有图片的删除按钮
-      const deleteButtons = tempDiv.querySelectorAll('.image-wrapper button')
+      const deleteButtons = tempDiv.querySelectorAll('.image-delete-button')
       deleteButtons.forEach(btn => btn.remove())
 
       return tempDiv.innerHTML
@@ -189,21 +188,18 @@ export default function QuestionBankPage({
 
     setIsSubmittingQuestion(true)
     try {
-      // 清理内容中的图片删除按钮
-      const cleanContent = cleanContentForSave(questionContent)
-
       let result
       if (editingQuestion) {
         result = await questionApi.update(editingQuestion.id, {
           title: questionTitle,
-          content: cleanContent,
+          content: questionContent,
           categoryId: selectedCategoryId,
           isFrequent: isFrequentQuestion,
         })
       } else {
         result = await questionApi.create({
           title: questionTitle,
-          content: cleanContent,
+          content: questionContent,
           categoryId: selectedCategoryId,
           isFrequent: isFrequentQuestion,
         })
@@ -446,7 +442,7 @@ export default function QuestionBankPage({
                       <div
                         className="text-base text-gray-800 prose prose-sm max-w-none break-words leading-relaxed overflow-wrap-break-word"
                         style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
-                        dangerouslySetInnerHTML={{ __html: question.content }}
+                        dangerouslySetInnerHTML={{ __html: cleanContentForDisplay(question.content) }}
                       />
                     </div>
                     <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto mt-3 sm:mt-0">

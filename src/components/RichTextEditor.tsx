@@ -25,11 +25,37 @@ export default function RichTextEditor({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
 
+  // 初始化编辑器内容
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
       editorRef.current.innerHTML = value
     }
   }, [value])
+
+  // 事件委托：处理图片删除按钮点击
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // 检查是否点击了删除按钮
+      if (target.tagName === 'BUTTON' && target.closest('.image-wrapper')) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        // 只在非只读模式下允许删除
+        if (!readonly) {
+          const wrapper = target.closest('.image-wrapper') as HTMLElement
+          wrapper.remove()
+          handleInput()
+        }
+      }
+    }
+
+    editor.addEventListener('click', handleClick)
+    return () => editor.removeEventListener('click', handleClick)
+  }, [readonly])
 
   const handleInput = () => {
     if (editorRef.current) {
@@ -70,28 +96,22 @@ export default function RichTextEditor({
       const result = await response.json()
 
       if (result.success) {
-        // 在编辑器中插入图片，只在编辑模式下显示删除按钮
+        // 在编辑器中插入图片
         const imageUrl = result.data.url
         const imageId = `img-${Date.now()}`
-
-        // 只在非只读模式下显示删除按钮
-        const deleteButton = readonly ? '' : `
-          <button
-            type="button"
-            onclick="this.parentElement.remove()"
-            class="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer"
-            contenteditable="false"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        `
 
         const imageWrapper = `
           <div class="image-wrapper relative inline-block" data-id="${imageId}">
             <img src="${imageUrl}" alt="上传的图片" style="max-width: 100%; height: auto;" />
-            ${deleteButton}
+            <button
+              type="button"
+              class="image-delete-button absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer"
+              contenteditable="false"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         `
 

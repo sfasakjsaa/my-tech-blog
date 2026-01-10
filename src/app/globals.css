@@ -8,8 +8,32 @@
 }
 
 /* 代码块样式 */
+pre {
+  @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-4;
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-width: 100%;
+  min-height: auto;
+  border: 1px solid #374151;
+}
+
 pre code {
-  @apply text-sm;
+  @apply text-sm text-gray-100;
+  display: block;
+}
+
+/* 手机端适配代码块 */
+@media (max-width: 640px) {
+  pre {
+    @apply p-3 text-sm;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  pre code {
+    @apply text-xs;
+  }
 }
 
 /* 自定义滚动条 */
