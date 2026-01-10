@@ -39,9 +39,9 @@ const CONFIG = {
 
 ## 文件位置
 
-- **上传目录**：`public/uploads/`
-- **访问 URL**：`/uploads/文件名`
-- **示例**：上传的文件 `1234567890_abc123.jpg` 可通过 `/uploads/1234567890_abc123.jpg` 访问
+- **上传目录**：`/tmp/uploads/`（临时目录）
+- **访问 URL**：`/api/images/文件名`
+- **示例**：上传的文件 `1234567890_abc123.jpg` 可通过 `/api/images/1234567890_abc123.jpg` 访问
 
 ## 部署注意事项
 
@@ -49,6 +49,7 @@ const CONFIG = {
 Render 的文件系统是**临时的**，每次重新部署都会清空：
 - 图片文件会丢失
 - 不影响博客文章（文章内容中的图片链接会失效）
+- 使用 `/tmp` 目录和 API 路由访问，解决构建后文件访问问题
 
 **解决方案**：
 1. 接受此限制，重新部署后重新上传图片
@@ -89,6 +90,9 @@ COZE_BUCKET_NAME=your-bucket-name
 ```bash
 # 上传测试图片
 curl -X POST -F "file=@test.png;type=image/png" http://localhost:5000/api/upload
+
+# 访问上传的图片
+curl http://localhost:5000/api/images/<filename>
 ```
 
 ## 常见问题
