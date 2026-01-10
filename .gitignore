@@ -46,3 +46,7 @@ Thumbs.db
 # 后端数据（本地测试用）
 backend/data/backup/
 backend/data/*.bak
+
+# 上传的图片文件（保留目录结构，但不跟踪文件）
+public/uploads/*
+!public/uploads/.gitkeep

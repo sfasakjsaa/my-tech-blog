@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "coze-coding-dev-sdk": "^0.7.2",
+    "form-data": "^4.0.5",
     "next": "16.1.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
