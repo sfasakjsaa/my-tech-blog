@@ -43,6 +43,15 @@ export default function Home() {
     setAlertModal({ isOpen: false, message: "" })
   }
 
+  // 检查是否需要显示认证弹窗（只在初始化时检查一次）
+  useEffect(() => {
+    const authStatus = localStorage.getItem("authStatus")
+    // 如果没有登录记录，显示认证弹窗
+    if (!authStatus) {
+      setShowAuthModal(true)
+    }
+  }, [])
+
   // 加载分类
   useEffect(() => {
     const loadCategories = async () => {
