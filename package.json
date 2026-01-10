@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "coze-coding-dev-sdk": "^0.7.2",
     "next": "16.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
