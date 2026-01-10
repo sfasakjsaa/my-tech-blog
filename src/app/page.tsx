@@ -424,7 +424,7 @@ export default function Home() {
       </div>
 
       {/* 移动端内容区 */}
-      <div className="h-[calc(100vh-80px)] flex flex-col pt-20">
+      <div className="h-[100dvh] flex flex-col pt-20">
         {currentPage === "home" ? (
           <div className="px-4 flex-1 overflow-y-auto pb-8">
             <HomePage />
