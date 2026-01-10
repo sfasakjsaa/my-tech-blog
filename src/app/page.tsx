@@ -316,6 +316,7 @@ export default function Home() {
                       }`}
                       onClick={() => {
                         setSelectedCategoryId(category.id)
+                        setCurrentPage("questions")
                         setIsCategoryDropdownOpen(false)
                         setIsMobileMenuOpen(false)
                       }}
@@ -458,6 +459,7 @@ export default function Home() {
                         }`}
                         onClick={() => {
                           setSelectedCategoryId(category.id)
+                          setCurrentPage("questions")
                           setIsCategoryDropdownOpen(false)
                         }}
                       >
