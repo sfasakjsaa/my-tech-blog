@@ -23,7 +23,7 @@ export default function QuestionBankPage({
   onOpenInputDialog,
   onShowAuthModal
 }: QuestionBankPageProps) {
-  const { isAuthenticated, isGuest, login, loginAsGuest } = useAuth()
+  const { isAuthenticated, isGuest, logout } = useAuth()
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
