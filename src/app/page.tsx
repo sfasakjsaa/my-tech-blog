@@ -331,6 +331,10 @@ export default function Home() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isGuest) {
+                          showAlert("游客无法操作，请登录", "warning")
+                          return
+                        }
                         handleDeleteCategory(category.id)
                       }}
                       disabled={isGuest}
@@ -460,7 +464,7 @@ export default function Home() {
 
             {/* 分类下拉列表 */}
             {isCategoryDropdownOpen && !loading && (
-              <div className="ml-4 space-y-1 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 p-2">
+              <div className="ml-4 space-y-1 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 p-2 max-h-96 overflow-y-auto">
                 {categories.map((category) => (
                   <div
                     key={category.id}
@@ -478,6 +482,10 @@ export default function Home() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isGuest) {
+                          showAlert("游客无法操作，请登录", "warning")
+                          return
+                        }
                         handleDeleteCategory(category.id)
                       }}
                       disabled={isGuest}
