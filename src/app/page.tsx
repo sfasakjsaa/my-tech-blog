@@ -345,7 +345,7 @@ export default function Home() {
 
             {/* 移动端登录/退出按钮 */}
             <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-              {isAuthenticated && (
+              {isAuthenticated ? (
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -354,6 +354,16 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                   <span className="font-medium">退出登录</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg transition-colors hover:shadow-lg hover:shadow-indigo-500/30"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  <span className="font-medium">{isGuest ? '管理员登录' : '登录'}</span>
                 </button>
               )}
             </div>
@@ -507,7 +517,7 @@ export default function Home() {
 
           {/* 登录/退出按钮 */}
           <div className="px-5 pb-5 pt-4 border-t border-gray-100">
-            {isAuthenticated && (
+            {isAuthenticated ? (
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -516,6 +526,16 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
                 <span className="font-medium">退出登录</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg transition-colors hover:shadow-lg hover:shadow-indigo-500/30"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                <span className="font-medium">{isGuest ? '管理员登录' : '登录'}</span>
               </button>
             )}
           </div>
