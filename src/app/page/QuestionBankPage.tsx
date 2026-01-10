@@ -23,7 +23,7 @@ export default function QuestionBankPage({
   onOpenInputDialog,
   onShowAuthModal
 }: QuestionBankPageProps) {
-  const { isAuthenticated, isGuest, logout } = useAuth()
+  const { isAuthenticated, logout } = useAuth()
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
@@ -140,8 +140,8 @@ export default function QuestionBankPage({
 
   // 新增问题
   const handleAddQuestion = () => {
-    if (isGuest) {
-      showAlert("游客无法操作，请登录", "warning")
+    if (!isAuthenticated) {
+      showAlert("请先登录", "warning")
       return
     }
     setEditingQuestion(null)
@@ -153,8 +153,8 @@ export default function QuestionBankPage({
 
   // 编辑问题
   const handleEditQuestion = (question: Question) => {
-    if (isGuest) {
-      showAlert("游客无法操作，请登录", "warning")
+    if (!isAuthenticated) {
+      showAlert("请先登录", "warning")
       return
     }
     setEditingQuestion(question)
@@ -237,8 +237,8 @@ export default function QuestionBankPage({
 
   // 删除问题
   const handleDeleteQuestion = async (id: string) => {
-    if (isGuest) {
-      showAlert("游客无法操作，请登录", "warning")
+    if (!isAuthenticated) {
+      showAlert("请先登录", "warning")
       return
     }
     showConfirm(
@@ -333,10 +333,10 @@ export default function QuestionBankPage({
             <option value="non-frequent">不常考</option>
           </select>
           <button
-            onClick={isGuest ? () => showAlert("游客无法操作，请登录", "warning") : handleAddQuestion}
-            disabled={isGuest}
+            onClick={!isAuthenticated ? () => showAlert("请先登录", "warning") : handleAddQuestion}
+            disabled={!isAuthenticated}
             className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isGuest
+              !isAuthenticated
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-purple-600 text-white hover:bg-purple-700'
             }`}
@@ -366,10 +366,10 @@ export default function QuestionBankPage({
             <option value="non-frequent">不常考</option>
           </select>
           <button
-            onClick={isGuest ? () => showAlert("游客无法操作，请登录", "warning") : handleAddQuestion}
-            disabled={isGuest}
+            onClick={!isAuthenticated ? () => showAlert("请先登录", "warning") : handleAddQuestion}
+            disabled={!isAuthenticated}
             className={`px-6 py-2 rounded-lg font-medium text-base flex-shrink-0 transition-colors ${
-              isGuest
+              !isAuthenticated
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-purple-600 text-white hover:bg-purple-700'
             }`}
@@ -432,10 +432,10 @@ export default function QuestionBankPage({
                     </div>
                     <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto mt-3 sm:mt-0">
                       <button
-                        onClick={isGuest ? () => showAlert("游客无法操作，请登录", "warning") : () => handleEditQuestion(question)}
-                        disabled={isGuest}
+                        onClick={!isAuthenticated ? () => showAlert("请先登录", "warning") : () => handleEditQuestion(question)}
+                        disabled={!isAuthenticated}
                         className={`flex-1 sm:flex-none px-4 py-2 text-sm rounded-lg transition-colors text-center font-semibold ${
-                          isGuest
+                          !isAuthenticated
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
                         }`}
@@ -443,10 +443,10 @@ export default function QuestionBankPage({
                         编辑
                       </button>
                       <button
-                        onClick={isGuest ? () => showAlert("游客无法操作，请登录", "warning") : () => handleDeleteQuestion(question.id)}
-                        disabled={isGuest}
+                        onClick={!isAuthenticated ? () => showAlert("请先登录", "warning") : () => handleDeleteQuestion(question.id)}
+                        disabled={!isAuthenticated}
                         className={`flex-1 sm:flex-none px-4 py-2 text-sm rounded-lg transition-colors text-center font-semibold ${
-                          isGuest
+                          !isAuthenticated
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-red-100 text-red-800 hover:bg-red-200'
                         }`}

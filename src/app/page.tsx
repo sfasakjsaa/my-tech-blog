@@ -12,7 +12,7 @@ import { categoryApi } from "@/lib/api"
 import { useAuth } from "@/contexts/AuthContext"
 
 export default function Home() {
-  const { isAuthenticated, isGuest, login, loginAsGuest, logout } = useAuth()
+  const { isAuthenticated, login, loginAsGuest, logout } = useAuth()
 
   const [currentPage, setCurrentPage] = useState<"home" | "questions">("home")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -108,8 +108,8 @@ export default function Home() {
   // 删除分类
   const handleDeleteCategory = async (id: string) => {
     // 认证检查
-    if (isGuest) {
-      showAlert("游客无法操作，请登录", "warning")
+    if (!isAuthenticated) {
+      showAlert("请先登录", "warning")
       return
     }
 
@@ -163,8 +163,8 @@ export default function Home() {
   // 新建分类
   const handleAddCategory = async (name: string) => {
     // 认证检查
-    if (isGuest) {
-      showAlert("游客无法操作，请登录", "warning")
+    if (!isAuthenticated) {
+      showAlert("请先登录", "warning")
       return
     }
 
@@ -331,15 +331,15 @@ export default function Home() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (isGuest) {
-                          showAlert("游客无法操作，请登录", "warning")
+                        if (!isAuthenticated) {
+                          showAlert("请先登录", "warning")
                           return
                         }
                         handleDeleteCategory(category.id)
                       }}
-                      disabled={isGuest}
+                      disabled={!isAuthenticated}
                       className={`md:opacity-0 md:group-hover:opacity-100 ml-2 transition-opacity ${
-                        isGuest ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                        !isAuthenticated ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
                       }`}
                       title="删除分类"
                     >
@@ -353,15 +353,15 @@ export default function Home() {
                 {/* 新建分类按钮 */}
                 <button
                   onClick={() => {
-                    if (isGuest) {
-                      showAlert("游客无法操作，请登录", "warning")
+                    if (!isAuthenticated) {
+                      showAlert("请先登录", "warning")
                       return
                     }
                     setIsInputDialogOpen(true)
                   }}
-                  disabled={isGuest}
+                  disabled={!isAuthenticated}
                   className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors w-full mt-2 border-t border-gray-100 pt-3 ${
-                    isGuest ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600 hover:bg-purple-50'
+                    !isAuthenticated ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600 hover:bg-purple-50'
                   }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -482,15 +482,15 @@ export default function Home() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (isGuest) {
-                          showAlert("游客无法操作，请登录", "warning")
+                        if (!isAuthenticated) {
+                          showAlert("请先登录", "warning")
                           return
                         }
                         handleDeleteCategory(category.id)
                       }}
-                      disabled={isGuest}
+                      disabled={!isAuthenticated}
                       className={`opacity-0 group-hover:opacity-100 ml-2 transition-opacity ${
-                        isGuest ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                        !isAuthenticated ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
                       }`}
                       title="删除分类"
                     >
@@ -503,15 +503,15 @@ export default function Home() {
                 {/* 新建分类按钮 */}
                 <button
                   onClick={() => {
-                    if (isGuest) {
-                      showAlert("游客无法操作，请登录", "warning")
+                    if (!isAuthenticated) {
+                      showAlert("请先登录", "warning")
                       return
                     }
                     setIsInputDialogOpen(true)
                   }}
-                  disabled={isGuest}
+                  disabled={!isAuthenticated}
                   className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors w-full ${
-                    isGuest ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600 hover:bg-purple-50'
+                    !isAuthenticated ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600 hover:bg-purple-50'
                   }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
