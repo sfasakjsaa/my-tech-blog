@@ -322,20 +322,18 @@ export default function Home() {
                 <span className="font-medium">首页</span>
               </span>
             </button>
-            <button
-              onClick={() => {
-                // 无论当前在哪个页面，点击题库都只切换下拉列表状态
-                setIsCategoryDropdownOpen(prev => !prev)
-                // 确保页面在题库
-                setCurrentPage("questions")
-              }}
-              className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex items-center justify-between ${
-                currentPage === "questions"
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
-                  : "text-gray-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600"
-              }`}
-            >
-              <div className="flex items-center gap-3">
+            <div className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex items-center justify-between ${
+              currentPage === "questions"
+                ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
+                : "text-gray-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600"
+            }`}>
+              <div
+                className="flex-1 flex items-center gap-3 cursor-pointer"
+                onClick={() => {
+                  setCurrentPage("questions")
+                  setIsCategoryDropdownOpen(false)
+                }}
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
@@ -349,14 +347,18 @@ export default function Home() {
                 </div>
               </div>
               <svg
-                className={`w-4 h-4 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 transition-transform cursor-pointer hover:scale-110 ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
+                }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </button>
+            </div>
 
             {/* 移动端分类下拉列表 */}
             {isCategoryDropdownOpen && !loading && (
@@ -479,20 +481,15 @@ export default function Home() {
 
           {/* 题库和分类 */}
           <div className="space-y-1">
-            <button
-              onClick={() => {
-                // 无论当前在哪个页面，点击题库都只切换下拉列表状态
-                setIsCategoryDropdownOpen(prev => !prev)
-                // 确保页面在题库
-                setCurrentPage("questions")
-              }}
-              className={`w-full text-left px-5 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-between ${
-                currentPage === "questions"
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
-                  : "text-gray-600 hover:bg-gradient-to-r hover:from-indigo-5050 hover:to-purple-50 hover:text-indigo-600"
-              }`}
-            >
-              <span className="flex items-center gap-3">
+            <div className={`w-full text-left px-5 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-between ${
+              currentPage === "questions"
+                ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
+                : "text-gray-600 hover:bg-gradient-to-r hover:from-indigo-5050 hover:to-purple-50 hover:text-indigo-600"
+            }`}>
+              <span
+                className="flex-1 flex items-center gap-3 cursor-pointer"
+                onClick={() => setCurrentPage("questions")}
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
@@ -506,14 +503,18 @@ export default function Home() {
                 </div>
               </span>
               <svg
-                className={`w-4 h-4 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 transition-transform cursor-pointer hover:scale-110 ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
+                }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </button>
+            </div>
 
             {/* 分类下拉列表 */}
             {isCategoryDropdownOpen && !loading && (
