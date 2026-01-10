@@ -32,31 +32,6 @@ export default function RichTextEditor({
     }
   }, [value])
 
-  // 事件委托：处理图片删除按钮点击
-  useEffect(() => {
-    const editor = editorRef.current
-    if (!editor) return
-
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      // 检查是否点击了删除按钮
-      if (target.tagName === 'BUTTON' && target.closest('.image-wrapper')) {
-        e.preventDefault()
-        e.stopPropagation()
-
-        // 只在非只读模式下允许删除
-        if (!readonly) {
-          const wrapper = target.closest('.image-wrapper') as HTMLElement
-          wrapper.remove()
-          handleInput()
-        }
-      }
-    }
-
-    editor.addEventListener('click', handleClick)
-    return () => editor.removeEventListener('click', handleClick)
-  }, [readonly])
-
   const handleInput = () => {
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML)
@@ -103,15 +78,6 @@ export default function RichTextEditor({
         const imageWrapper = `
           <div class="image-wrapper relative inline-block" data-id="${imageId}">
             <img src="${imageUrl}" alt="上传的图片" style="max-width: 100%; height: auto;" />
-            <button
-              type="button"
-              class="image-delete-button absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer"
-              contenteditable="false"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         `
 

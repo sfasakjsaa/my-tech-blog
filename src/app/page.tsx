@@ -8,7 +8,7 @@ import InputDialog from "@/components/InputDialog"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import AlertModal from "@/components/AlertModal"
 import AuthModal from "@/components/AuthModal"
-import { categoryApi } from "@/lib/api"
+import { categoryApi, questionApi } from "@/lib/api"
 import { useAuth } from "@/contexts/AuthContext"
 
 export default function Home() {
@@ -23,6 +23,7 @@ export default function Home() {
   const [isInputDialogOpen, setIsInputDialogOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [loginError, setLoginError] = useState("")
+  const [categoryQuestionCounts, setCategoryQuestionCounts] = useState<Record<string, number>>({})
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({
     isOpen: false,
     title: "",
@@ -44,6 +45,35 @@ export default function Home() {
 
   const closeAlert = () => {
     setAlertModal({ isOpen: false, message: "" })
+  }
+
+  // 重新加载分类并计算题目数量
+  const reloadCategoriesWithCounts = async () => {
+    try {
+      const result = await categoryApi.getAll()
+      if (result.success && result.data) {
+        setCategories(result.data)
+
+        // 计算每个分类的题目数量
+        const counts: Record<string, number> = {}
+        for (const category of result.data) {
+          try {
+            const questionResult = await questionApi.list({ categoryId: category.id })
+            if (questionResult.success && questionResult.data) {
+              counts[category.id] = questionResult.data.length
+            } else {
+              counts[category.id] = 0
+            }
+          } catch (error) {
+            console.error(`Error loading questions for category ${category.id}:`, error)
+            counts[category.id] = 0
+          }
+        }
+        setCategoryQuestionCounts(counts)
+      }
+    } catch (error) {
+      console.error("Error reloading categories:", error)
+    }
   }
 
   // 检查是否需要显示认证弹窗（只在初始化时检查一次）
@@ -68,6 +98,23 @@ export default function Home() {
           if (result.data.length > 0 && !selectedCategoryId) {
             setSelectedCategoryId(result.data[0].id)
           }
+
+          // 计算每个分类的题目数量
+          const counts: Record<string, number> = {}
+          for (const category of result.data) {
+            try {
+              const questionResult = await questionApi.list({ categoryId: category.id })
+              if (questionResult.success && questionResult.data) {
+                counts[category.id] = questionResult.data.length
+              } else {
+                counts[category.id] = 0
+              }
+            } catch (error) {
+              console.error(`Error loading questions for category ${category.id}:`, error)
+              counts[category.id] = 0
+            }
+          }
+          setCategoryQuestionCounts(counts)
         }
       } catch (error) {
         console.error("Error loading categories:", error)
@@ -328,6 +375,7 @@ export default function Home() {
                     }}
                   >
                     <span className="flex-1 text-left truncate">{category.name}</span>
+                    <span className="text-xs text-gray-500 mr-2">({categoryQuestionCounts[category.id] || 0})</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -387,6 +435,7 @@ export default function Home() {
             categoryName={categories.find(c => c.id === selectedCategoryId)?.name || ""}
             categories={categories}
             onOpenInputDialog={() => setIsInputDialogOpen(true)}
+            onQuestionChange={() => reloadCategoriesWithCounts()}
           />
         )}
       </div>
@@ -479,6 +528,7 @@ export default function Home() {
                     }}
                   >
                     <span className="flex-1 text-left truncate">{category.name}</span>
+                    <span className="text-xs text-gray-500 mr-2">({categoryQuestionCounts[category.id] || 0})</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -536,6 +586,7 @@ export default function Home() {
             categories={categories}
             onOpenInputDialog={() => setIsInputDialogOpen(true)}
             onShowAuthModal={() => setShowAuthModal(true)}
+            onQuestionChange={() => reloadCategoriesWithCounts()}
           />
         )}
       </div>

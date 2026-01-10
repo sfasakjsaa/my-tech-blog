@@ -14,6 +14,7 @@ interface QuestionBankPageProps {
   categories: any[]
   onOpenInputDialog: () => void
   onShowAuthModal?: () => void
+  onQuestionChange?: () => void
 }
 
 export default function QuestionBankPage({
@@ -21,7 +22,8 @@ export default function QuestionBankPage({
   categoryName,
   categories,
   onOpenInputDialog,
-  onShowAuthModal
+  onShowAuthModal,
+  onQuestionChange
 }: QuestionBankPageProps) {
   const { isAuthenticated, logout } = useAuth()
 
@@ -217,6 +219,8 @@ export default function QuestionBankPage({
         if (qResult.success && qResult.data) {
           setQuestions(qResult.data)
         }
+        // 通知父组件更新分类题目数量
+        onQuestionChange?.()
       } else {
         showAlert("保存失败，请重试", "error")
         // 失败时也刷新列表，确保数据同步
@@ -270,6 +274,8 @@ export default function QuestionBankPage({
             if (qResult.success && qResult.data) {
               setQuestions(qResult.data)
             }
+            // 通知父组件更新分类题目数量
+            onQuestionChange?.()
           } else {
             showAlert("删除失败，请重试", "error")
             closeConfirm()
