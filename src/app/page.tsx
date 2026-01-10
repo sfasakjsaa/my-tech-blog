@@ -324,14 +324,10 @@ export default function Home() {
             </button>
             <button
               onClick={() => {
-                if (currentPage === "questions") {
-                  // 已经在题目页面，只切换下拉列表
-                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
-                } else {
-                  // 切换到题目页面并展开下拉列表
-                  setCurrentPage("questions")
-                  setIsCategoryDropdownOpen(true)
-                }
+                // 无论当前在哪个页面，点击题库都只切换下拉列表状态
+                setIsCategoryDropdownOpen(prev => !prev)
+                // 确保页面在题库
+                setCurrentPage("questions")
               }}
               className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex items-center justify-between ${
                 currentPage === "questions"
@@ -485,14 +481,10 @@ export default function Home() {
           <div className="space-y-1">
             <button
               onClick={() => {
-                if (currentPage === "questions") {
-                  // 已经在题目页面，只切换下拉列表
-                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
-                } else {
-                  // 切换到题目页面并展开下拉列表
-                  setCurrentPage("questions")
-                  setIsCategoryDropdownOpen(true)
-                }
+                // 无论当前在哪个页面，点击题库都只切换下拉列表状态
+                setIsCategoryDropdownOpen(prev => !prev)
+                // 确保页面在题库
+                setCurrentPage("questions")
               }}
               className={`w-full text-left px-5 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-between ${
                 currentPage === "questions"
