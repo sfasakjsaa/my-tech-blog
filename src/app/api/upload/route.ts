@@ -120,11 +120,11 @@ async function compressImage(buffer: Buffer, mimeType: string): Promise<Buffer> 
 
   // 根据类型压缩
   if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
-    return await image.jpeg({ quality: CONFIG.JPEG_QUALITY }).toBuffer()
+    return Buffer.from(await image.jpeg({ quality: CONFIG.JPEG_QUALITY }).toBuffer())
   } else if (mimeType === 'image/png') {
-    return await image.png({ quality: CONFIG.JPEG_QUALITY }).toBuffer()
+    return Buffer.from(await image.png({ quality: CONFIG.JPEG_QUALITY }).toBuffer())
   } else if (mimeType === 'image/webp') {
-    return await image.webp({ quality: CONFIG.WEBP_QUALITY }).toBuffer()
+    return Buffer.from(await image.webp({ quality: CONFIG.WEBP_QUALITY }).toBuffer())
   } else {
     return buffer // GIF 等其他格式不压缩
   }
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
 
     // 转换为 Buffer
     const arrayBuffer = await file.arrayBuffer()
-    let buffer = Buffer.from(arrayBuffer)
+    let buffer = Buffer.from(arrayBuffer) as Buffer
 
     // 压缩图片
     try {
