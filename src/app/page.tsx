@@ -116,12 +116,7 @@ export default function Home() {
     loadCategories()
   }, [])
 
-  // 当切换到题库页面时，自动展开分类列表
-  useEffect(() => {
-    if (currentPage === "questions") {
-      setIsCategoryDropdownOpen(true)
-    }
-  }, [currentPage])
+
 
   const handleLogin = (password: string) => {
     if (login(password)) {
