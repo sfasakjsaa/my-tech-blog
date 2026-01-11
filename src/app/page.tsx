@@ -234,8 +234,8 @@ export default function Home() {
       {/* 移动端布局 - 导航栏在顶部 */}
       <div className="md:hidden">
         {/* 固定顶部导航栏 */}
-        <header className="fixed top-0 left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200 safe-area-top">
-          <div className="flex items-center justify-between px-4 py-3">
+        <header className="fixed top-0 left-0 right-0 z-[70] bg-white border-b-4 border-indigo-500 shadow-2xl safe-area-top">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -416,19 +416,21 @@ export default function Home() {
         </header>
 
         {/* 移动端内容区域 */}
-        <main className="h-screen pt-[60px] overflow-hidden">
+        <main className="h-screen pt-[72px] overflow-y-auto bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
           {currentPage === "home" ? (
-            <div className="h-full overflow-y-auto">
+            <div>
               <HomePage />
             </div>
           ) : (
-            <QuestionBankPage
-              selectedCategoryId={selectedCategoryId}
-              categoryName={categories.find(c => c.id === selectedCategoryId)?.name || ""}
-              categories={categories}
-              onOpenInputDialog={() => setIsInputDialogOpen(true)}
-              onQuestionChange={() => reloadCategoriesWithCounts()}
-            />
+            <div className="pb-8">
+              <QuestionBankPage
+                selectedCategoryId={selectedCategoryId}
+                categoryName={categories.find(c => c.id === selectedCategoryId)?.name || ""}
+                categories={categories}
+                onOpenInputDialog={() => setIsInputDialogOpen(true)}
+                onQuestionChange={() => reloadCategoriesWithCounts()}
+              />
+            </div>
           )}
         </main>
       </div>

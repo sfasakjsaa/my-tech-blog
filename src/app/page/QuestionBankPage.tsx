@@ -321,7 +321,7 @@ export default function QuestionBankPage({
   }
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col min-h-0">
       {/* 页面标题 - 桌面端显示 */}
       {categoryName && (
         <div className="hidden md:block px-3 md:px-0 pb-6 flex-shrink-0">
@@ -332,7 +332,7 @@ export default function QuestionBankPage({
       )}
 
       {/* 移动端搜索框 */}
-      <div className="md:hidden px-4 py-2 flex-shrink-0 bg-white border-b border-gray-200">
+      <div className="md:hidden px-4 py-3 flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="relative">
           <svg
             className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"
@@ -347,18 +347,18 @@ export default function QuestionBankPage({
             placeholder="搜索题目..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm shadow-sm"
           />
         </div>
       </div>
 
       {/* 筛选和操作按钮 */}
-      <div className="md:hidden px-4 py-2 flex-shrink-0 bg-white border-b border-gray-200">
+      <div className="md:hidden px-4 py-3 flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="flex items-center gap-2">
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as any)}
-            className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm shadow-sm"
           >
             <option value="all">全部题目</option>
             <option value="frequent">常考题</option>
@@ -367,10 +367,10 @@ export default function QuestionBankPage({
           <button
             onClick={!isAuthenticated ? () => showAlert("请先登录", "warning") : handleAddQuestion}
             disabled={!isAuthenticated}
-            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm ${
               !isAuthenticated
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-purple-600 text-white hover:bg-purple-700'
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:shadow-md'
             }`}
           >
             新增题目
