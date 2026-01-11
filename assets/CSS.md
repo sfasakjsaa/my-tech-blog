@@ -1,1212 +1,481 @@
-### 1*. new操作符的实现原理
-
-**new操作符的执行过程：**
-
-（1）首先创建了一个新的空对象
-
-（2）设置原型，将对象的原型设置为函数的 prototype 对象。
-
-（3）让函数的 this 指向这个对象，执行构造函数的代码（为这个新对象添加属性）
-
-（4）判断函数的返回值类型，如果是值类型，返回创建的对象。如果是引用类型，就返回这个引用类型的对象。
-
-具体实现：
-
-```JavaScript
-function objectFactory() {
-  let newObject = null;
-  let constructor = Array.prototype.shift.call(arguments);
-  let result = null;
-  // 判断参数是否是一个函数
-  if (typeof constructor !== "function") {
-    console.error("type error");
-    return;
-  }
-  // 新建一个空对象，对象的原型为构造函数的 prototype 对象
-  newObject = Object.create(constructor.prototype);
-  // 将 this 指向新建对象，并执行函数
-  result = constructor.apply(newObject, arguments);
-  // 判断返回对象
-  let flag = result && (typeof result === "object" || typeof result === "function");
-  // 判断返回结果
-  return flag ? result : newObject;
-}
-// 使用方法
-objectFactory(构造函数, 初始化参数);
-```
-
-### 2. *map和Object的区别
-
-**Map和Object的核心区别：**Map是ES6新增的数据结构，键可以是任意类型（对象、函数等），保持插入顺序，频繁添加删除操作性能更好，没有原型链污染，直接通过size属性获取大小；Object是传统对象，键主要是字符串或Symbol，不保证顺序，可直接JSON序列化，有原型链，需要通过Object.keys().length计算大小。
-
-|          | Map                                                          | Object                                                       |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 意外的键 | Map默认情况不包含任何键，只包含显式插入的键。                | Object 有一个原型, 原型链上的键名有可能和自己在对象上的设置的键名产生冲突。 |
-| 键的类型 | Map的键可以是任意值，包括函数、对象或任意基本类型。          | Object 的键必须是 String 或是Symbol。                        |
-| 键的顺序 | Map 中的 key 是有序的。因此，当迭代的时候， Map 对象以插入的顺序返回键值。 | Object 的键是无序的                                          |
-| Size     | Map 的键值对个数可以轻易地通过size 属性获取                  | Object 的键值对个数只能手动计算                              |
-| 迭代     | Map 是 iterable 的，所以可以直接被迭代。                     | 迭代Object需要以某种方式获取它的键然后才能迭代。             |
-| 性能     | 在频繁增删键值对的场景下表现更好。                           | 在频繁添加和删除键值对的场景下未作出优化。                   |
-
-### 3. map和weakMap的区别
-
-**Map和WeakMap的核心区别：**Map的键可以是任意类型（对象、函数、基本类型），使用强引用阻止垃圾回收，可遍历，有size属性和clear方法，适合通用数据存储但需手动清理避免内存泄漏；WeakMap的键只能是对象，使用弱引用不阻止垃圾回收，不可遍历，无size属性和clear方法，能自动清理避免内存泄漏。
-
-**（1）Map**
-
-map本质上就是键值对的集合，但是普通的Object中的键值对中的键只能是字符串。而ES6提供的Map数据结构类似于对象，但是它的键不限制范围，可以是任意类型，是一种更加完善的Hash结构。如果Map的键是一个原始数据类型，只要两个键严格相同，就视为是同一个键。
-
-实际上Map是一个数组，它的每一个数据也都是一个数组，其形式如下：
-
-```JavaScript
-const map = [
-     ["name","张三"],
-     ["age",18],
-]
-```
-
-Map数据结构有以下操作方法：
-
-- **size**： `map.size` 返回Map结构的成员总数。
-- **set(key,value)**：设置键名key对应的键值value，然后返回整个Map结构，如果key已经有值，则键值会被更新，否则就新生成该键。（因为返回的是当前Map对象，所以可以链式调用）
-- **get(key)**：该方法读取key对应的键值，如果找不到key，返回undefined。
-- **has(key)**：该方法返回一个布尔值，表示某个键是否在当前Map对象中。
-- **delete(key)**：该方法删除某个键，返回true，如果删除失败，返回false。
-- **clear()**：map.clear()清除所有成员，没有返回值。
-
-Map结构原生提供是三个遍历器生成函数和一个遍历方法
-
-- keys()：返回键名的遍历器。
-- values()：返回键值的遍历器。
-- entries()：返回所有成员的遍历器。
-- forEach()：遍历Map的所有成员。
-
-```JavaScript
-const map = new Map([
-     ["foo",1],
-     ["bar",2],
-])
-for(let key of map.keys()){
-    console.log(key);  // foo bar
-}
-for(let value of map.values()){
-     console.log(value); // 1 2
-}
-for(let items of map.entries()){
-    console.log(items);  // ["foo",1]  ["bar",2]
-}
-map.forEach( (value,key,map) => {
-     console.log(key,value); // foo 1    bar 2
-})
-```
-
-**（2）WeakMap**
-
-WeakMap 对象也是一组键值对的集合，其中的键是弱引用的。**其键必须是对象**，原始数据类型不能作为key值，而值可以是任意的。
-
-该对象也有以下几种方法：
-
-- **set(key,value)**：设置键名key对应的键值value，然后返回整个Map结构，如果key已经有值，则键值会被更新，否则就新生成该键。（因为返回的是当前Map对象，所以可以链式调用）
-- **get(key)**：该方法读取key对应的键值，如果找不到key，返回undefined。
-- **has(key)**：该方法返回一个布尔值，表示某个键是否在当前Map对象中。
-- **delete(key)**：该方法删除某个键，返回true，如果删除失败，返回false。
-
-其clear()方法已经被弃用，所以可以通过创建一个空的WeakMap并替换原对象来实现清除。
-
-WeakMap的设计目的在于，有时想在某个对象上面存放一些数据，但是这会形成对于这个对象的引用。一旦不再需要这两个对象，就必须手动删除这个引用，否则垃圾回收机制就不会释放对象占用的内存。
-
-而WeakMap的**键名所引用的对象都是弱引用**，即垃圾回收机制不将该引用考虑在内。因此，只要所引用的对象的其他引用都被清除，垃圾回收机制就会释放该对象所占用的内存。也就是说，一旦不再需要，WeakMap 里面的**键名对象和所对应的键值对会自动消失，不用手动删除引用**。
-
-**总结：**
-
-- Map 数据结构。它类似于对象，也是键值对的集合，但是“键”的范围不限于字符串，各种类型的值（包括对象）都可以当作键。
-- WeakMap 结构与 Map 结构类似，也是用于生成键值对的集合。但是 WeakMap 只接受对象作为键名（ null 除外），不接受其他类型的值作为键名。而且 WeakMap 的键名所指向的对象，不计入垃圾回收机制。
-
-### 4. JavaScript有哪些内置对象
-
-全局的对象（ global objects ）或称标准内置对象，不要和 "全局对象（global object）" 混淆。这里说的全局的对象是说在
-
-全局作用域里的对象。全局作用域中的其他对象可以由用户的脚本创建或由宿主程序提供。
-
-**标准内置对象的分类：**
-
-（1）值属性，这些全局属性返回一个简单值，这些值没有自己的属性和方法。
-
-例如 Infinity、NaN、undefined、null 字面量
-
-（2）函数属性，全局函数可以直接调用，不需要在调用时指定所属对象，执行结束后会将结果直接返回给调用者。
-
-例如 eval()、parseFloat()、parseInt() 等
-
-（3）基本对象，基本对象是定义或使用其他对象的基础。基本对象包括一般对象、函数对象和错误对象。
-
-例如 Object、Function、Boolean、Symbol、Error 等
-
-（4）数字和日期对象，用来表示数字、日期和执行数学计算的对象。
-
-例如 Number、Math、Date
-
-（5）字符串，用来表示和操作字符串的对象。
-
-例如 String、RegExp
-
-（6）可索引的集合对象，这些对象表示按照索引值来排序的数据集合，包括数组和类型数组，以及类数组结构的对象。例如 Array
-
-（7）使用键的集合对象，这些集合对象在存储数据时会使用到键，支持按照插入顺序来迭代元素。
-
-例如 Map、Set、WeakMap、WeakSet
-
-（8）矢量集合，SIMD 矢量集合中的数据会被组织为一个数据序列。
-
-例如 SIMD 等
-
-（9）结构化数据，这些对象用来表示和操作结构化的缓冲区数据，或使用 JSON 编码的数据。
-
-例如 JSON 等
-
-（10）控制抽象对象
-
-例如 Promise、Generator 等
-
-（11）反射
-
-例如 Reflect、Proxy
-
-（12）国际化，为了支持多语言处理而加入 ECMAScript 的对象。
-
-例如 Intl、Intl.Collator 等
-
-（13）WebAssembly
-
-（14）其他
-
-例如 arguments
-
-**总结：**
-
-js 中的内置对象主要指的是在程序执行前存在全局作用域里的由 js 定义的一些全局值属性、函数和用来实例化其他对象的构造函数对象。一般经常用到的如全局变量值 NaN、undefined，全局函数如 parseInt()、parseFloat() 用来实例化对象的构造函数如 Date、Object 等，还有提供数学计算的单体内置对象如 Math 对象。
-
-### 5. 常用的正则表达式有哪些？
-
-```JavaScript
-// （1）匹配 16 进制颜色值
-var regex = /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/g;
-
-// （2）匹配日期，如 yyyy-mm-dd 格式
-var regex = /^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/;
-
-// （3）匹配 qq 号
-var regex = /^[1-9][0-9]{4,10}$/g;
-
-// （4）手机号码正则
-var regex = /^1[34578]\d{9}$/g;
-
-// （5）用户名正则
-var regex = /^[a-zA-Z\$][a-zA-Z0-9_\$]{4,16}$/;
-```
-
-### 6. 对JSON的理解
+### 1.* let、const、var的区别
 
 **回答：**
 
-JSON 是一种轻量级跨语言数据交换格式，常用于前后端数据传递。虽然JSON语法基于JavaScript，但两者不同：JSON格式更严格，属性值不能是函数或NaN等。
-
-JavaScript提供了两种转换的方法：
-
-- JSON.stringify() ：将JS对象序列化为JSON字符串，用于发送数据到后端
-- JSON.parse() ：将JSON字符串解析为JS对象，用于接收后端数据
+1. let和const具有块级作用域而var是函数作用域
+2. let和const不存在变量提升而var存在变量提升
+3. let和const不能重复声明而var可以
+4. const声明后不能重新赋值而let和var可以
+5. var全局声明会挂载到window对象而let和const不会
 
 **解析：**
 
-JSON 是一种基于文本的轻量级的数据交换格式。它可以被任何的编程语言读取和作为数据格式来传递。
+**（1）块级作用域：**块作用域由 `{ }`包括，let和const具有块级作用域，var不存在块级作用域。块级作用域解决了ES5中的两个问题：
 
-在项目开发中，使用 JSON 作为前后端数据交换的方式。在前端通过将一个符合 JSON 格式的数据结构序列化为
+- 内层变量可能覆盖外层变量
+- 用来计数的循环变量泄露为全局变量
 
-JSON 字符串，然后将它传递到后端，后端通过 JSON 格式的字符串解析后生成对应的数据结构，以此来实现前后端数据的一个传递。
+**（2）变量提升：**var存在变量提升，let和const不存在变量提升，即在变量只能在声明之后使用，否在会报错。
 
-因为 JSON 的语法是基于 js 的，因此很容易将 JSON 和 js 中的对象弄混，但是应该注意的是 JSON 和 js 中的对象不是一回事，JSON 中对象格式更加严格，比如说在 JSON 中属性值不能为函数，不能出现 NaN 这样的属性值等，因此大多数的 js 对象是不符合 JSON 对象的格式的。
+**（3）给全局添加属性：**浏览器的全局对象是window，Node的全局对象是global。var声明的变量为全局变量，并且会将该变量添加为全局对象的属性，但是let和const不会。
 
-在 js 中提供了两个函数来实现 js 数据结构和 JSON 格式的转换处理，
+**（4）重复声明：**var声明变量时，可以重复声明变量，后声明的同名变量会覆盖之前声明的遍历。const和let不允许重复声明变量。
 
-- JSON.stringify 函数，通过传入一个符合 JSON 格式的数据结构，将其转换为一个 JSON 字符串。如果传入的数据结构不符合 JSON 格式，那么在序列化的时候会对这些值进行对应的特殊处理，使其符合规范。在前端向后端发送数据时，可以调用这个函数将数据对象转化为 JSON 格式的字符串。
-- JSON.parse() 函数，这个函数用来将 JSON 格式的字符串转换为一个 js 数据结构，如果传入的字符串不是标准的 JSON 格式的字符串的话，将会抛出错误。当从后端接收到 JSON 格式的字符串时，可以通过这个方法来将其解析为一个 js 数据结构，以此来进行数据的访问。
+**（5）暂时性死区：在使用let、const命令声明变量之前，该变量都是不可用的。这在语法上，称为**暂时性死区。使用var声明的变量不存在暂时性死区。
 
-### 7*. JavaScript脚本延迟加载的方式有哪些？
+**（6）初始值设置：**在变量声明时，var 和 let 可以不用设置初始值。而const声明变量必须设置初始值。
 
-JavaScript延迟加载的方式有async属性，setTimeout延迟方法
+**（7）指针指向：**let和const都是ES6新增的用于创建变量的语法。 let创建的变量是可以更改指针指向（可以重新赋值）。但const声明的变量是不允许改变指针的指向。
 
-延迟加载就是等页面加载完成之后再加载 JavaScript 文件。 js 延迟加载有助于提高页面加载速度。
+| **区别**           | **var** | **let** | **const** |
+| ------------------ | ------- | ------- | --------- |
+| 是否有块级作用域   | ×       | ✔️       | ✔️         |
+| 是否存在变量提升   | ✔️       | ×       | ×         |
+| 是否添加全局属性   | ✔️       | ×       | ×         |
+| 能否重复声明变量   | ✔️       | ×       | ×         |
+| 是否存在暂时性死区 | ×       | ✔️       | ✔️         |
+| 是否必须设置初始值 | ×       | ×       | ✔️         |
+| 能否改变指针指向   | ✔️       | ✔️       | ×         |
 
-一般有以下几种方式：
-
-- **defer 属性：** 给 js 脚本添加 defer 属性，这个属性会让脚本的加载与文档的解析同步解析，然后在文档解析完成后再执行这个脚本文件，这样的话就能使页面的渲染不被阻塞。多个设置了 defer 属性的脚本按规范来说最后是顺序执行的，但是在一些浏览器中可能不是这样。
-- **async 属性：** 给 js 脚本添加 async 属性，这个属性会使脚本异步加载，不会阻塞页面的解析过程，但是当脚本加载完成后立即执行 js 脚本，这个时候如果文档没有解析完成的话同样会阻塞。多个 async 属性的脚本的执行顺序是不可预测的，一般不会按照代码的顺序依次执行。
-- **动态创建 DOM 方式：** 动态创建 DOM 标签的方式，可以对文档的加载事件进行监听，当文档加载完成后再动态的创建 script 标签来引入 js 脚本。
-- **使用 setTimeout 延迟方法：** 设置一个定时器来延迟加载js脚本文件
-- **让 JS 最后加载：** 将 js 脚本放在文档的底部，来使 js 脚本尽可能的在最后来加载执行。
-
-### 8.* JavaScript 类数组对象的定义？
+### 2. * const对象的属性可以修改吗
 
 **回答：**
 
-类数组对象是指具有数字索引和length属性但不是Array实例的对象，类数组对象可以通过索引访问元素并获取长度，但不能直接使用push、map等数组方法，需要通过Array.from()、展开运算符或Array.prototype.slice.call()等方法转换为真正的数组后才能使用完整的数组方法。
+const对象的属性可以修改，因为const保证的是变量指向的内存地址不变而不是对象内容不变，所以可以修改、新增或删除对象的属性，但不能重新赋值整个对象
 
-一个拥有 length 属性和若干索引属性的对象就可以被称为类数组对象，类数组对象和数组类似，但是不能调用数组的方法。常见的类数组对象有 arguments 和 DOM 方法的返回结果，还有一个函数也可以被看作是类数组对象，因为它含有 length 属性值，代表可接收的参数个数。
+const保证的并不是变量的值不能改动，而是变量指向的那个内存地址不能改动。对于基本类型的数据（数值、字符串、布尔值），其值就保存在变量指向的那个内存地址，因此等同于常量。
 
-常见的类数组转换为数组的方法有这样几种：
+但对于引用类型的数据（主要是对象和数组）来说，变量指向数据的内存地址，保存的只是一个指针，const只能保证这个指针是固定不变的，至于它指向的数据结构是不是可变的，就完全不能控制了。
 
-（1）通过 call 调用数组的 slice 方法来实现转换
-
-```JavaScript
-Array.prototype.slice.call(arrayLike);
-```
-
-（2）通过 call 调用数组的 splice 方法来实现转换
-
-```JavaScript
-Array.prototype.splice.call(arrayLike, 0);
-```
-
-（3）通过 apply 调用数组的 concat 方法来实现转换
-
-```JavaScript
-Array.prototype.concat.apply([], arrayLike);
-```
-
-（4）通过 Array.from 方法来实现转换
-
-```JavaScript
-Array.from(arrayLike);
-```
-
-### 9.* 数组有哪些原生方法？
-
-- 数组和字符串的转换方法：toString()、toLocalString()、join() 其中 join() 方法可以指定转换为字符串时的分隔符。
-- 数组尾部操作的方法 pop() 和 push()，push 方法可以传入多个参数。
-- 数组首部操作的方法 shift() 和 unshift() 重排序的方法 reverse() 和 sort()，sort() 方法可以传入一个函数来进行比较，传入前后两个值，如果返回值为正数，则交换两个参数的位置。
-- 数组连接的方法 concat() ，返回的是拼接好的数组，不影响原数组。
-- 数组截取办法 slice()，用于截取数组中的一部分返回，不影响原数组。
-- 数组插入方法 splice()，影响原数组查找特定项的索引的方法，indexOf() 和 lastIndexOf() 迭代方法 every()、some()、filter()、map() 和 forEach() 方法
-- 数组归并方法 reduce() 和 reduceRight() 方法
-
-### 10. **Unicode、UTF-8、UTF-16、UTF-32的区别？**
-
-#### （1）Unicode
-
-在说`Unicode`之前需要先了解一下`ASCII`码：ASCII 码（`American Standard Code for Information Interchange`）称为美国标准信息交换码。
-
-- 它是基于拉丁字母的一套电脑编码系统。
-- 它定义了一个用于代表常见字符的字典。
-- 它包含了"A-Z"(包含大小写)，数据"0-9" 以及一些常见的符号。
-- 它是专门为英语而设计的，有128个编码，对其他语言无能为力
-
-`ASCII`码可以表示的编码有限，要想表示其他语言的编码，还是要使用`Unicode`来表示，可以说`Unicode`是`ASCII` 的超集。
-
-`Unicode`全称 `Unicode Translation Format`，又叫做统一码、万国码、单一码。`Unicode` 是为了解决传统的字符编码方案的局限而产生的，它为每种语言中的每个字符设定了统一并且唯一的二进制编码，以满足跨语言、跨平台进行文本转换、处理的要求。
-
-`Unicode`的实现方式（也就是编码方式）有很多种，常见的是**UTF-8**、**UTF-16**、**UTF-32**和**USC-2**。
-
-#### （2）UTF-8
-
-`UTF-8`是使用最广泛的`Unicode`编码方式，它是一种可变长的编码方式，可以是1—4个字节不等，它可以完全兼容`ASCII`码的128个字符。
-
-**注意：** `UTF-8` 是一种编码方式，`Unicode`是一个字符集合。
-
-`UTF-8`的编码规则：
-
-- 对于**单字节**的符号，字节的第一位为0，后面的7位为这个字符的`Unicode`编码，因此对于英文字母，它的`Unicode`编码和`ACSII`编码一样。
-- 对于**n字节**的符号，第一个字节的前n位都是1，第n+1位设为0，后面字节的前两位一律设为10，剩下的没有提及的二进制位，全部为这个符号的`Unicode`码 。
-
-来看一下具体的`Unicode`编号范围与对应的`UTF-8`二进制格式 ：
-
-| 编码范围（编号对应的十进制数）  | 二进制格式                          |
-| ------------------------------- | ----------------------------------- |
-| 0x00—0x7F （0-127）             | 0xxxxxxx                            |
-| 0x80—0x7FF （128-2047）         | 110xxxxx 10xxxxxx                   |
-| 0x800—0xFFFF  （2048-65535）    | 1110xxxx 10xxxxxx 10xxxxxx          |
-| 0x10000—0x10FFFF  （65536以上） | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx |
-
-那该如何通过具体的`Unicode`编码，进行具体的`UTF-8`编码呢？**步骤如下：**
-
-- 找到该`Unicode`编码的所在的编号范围，进而找到与之对应的二进制格式
-- 将`Unicode`编码转换为二进制数（去掉最高位的0）
-- 将二进制数从右往左一次填入二进制格式的`X`中，如果有`X`未填，就设为0
-
-来看一个实际的例子：
-
-“**马**” 字的`Unicode`编码是：`0x9A6C`，整数编号是`39532`
-
-（1）首选确定了该字符在第三个范围内，它的格式是 `1110xxxx 10xxxxxx 10xxxxxx`
-
-（2）39532对应的二进制数为`1001 1010 0110 1100`
-
-（3）将二进制数填入X中，结果是：`11101001 10101001 10101100`
-
-#### （3）UTF-16
-
-**1. 平面的概念**
-
-在了解`UTF-16`之前，先看一下**平面**的概念：
-
-`Unicode`编码中有很多很多的字符，它并不是一次性定义的，而是分区进行定义的，每个区存放**65536**（216）个字符，这称为一个**平面**，目前总共有17 个平面。
-
-最前面的一个平面称为**基本平面**，它的码点从**0 — 216**-1，写成16进制就是`U+0000 — U+FFFF`，那剩下的16个平面就是**辅助平面**，码点范围是 `U+10000—U+10FFFF`。
-
-**2. UTF-16 概念：**
-
-`UTF-16`也是`Unicode`编码集的一种编码形式，把`Unicode`字符集的抽象码位映射为16位长的整数（即码元）的序列，用于数据存储或传递。`Unicode`字符的码位需要1个或者2个16位长的码元来表示，因此`UTF-16`也是用变长字节表示的。
-
-**3. UTF-16 编码规则：**
-
-- 编号在 `U+0000—U+FFFF` 的字符（常用字符集），直接用两个字节表示。
-- 编号在 `U+10000—U+10FFFF` 之间的字符，需要用四个字节表示。
-
-**4. 编码识别**
-
-那么问题来了，当遇到两个字节时，怎么知道是把它当做一个字符还是和后面的两个字节一起当做一个字符呢？
-
-`UTF-16` 编码肯定也考虑到了这个问题，在基本平面内，从 `U+D800 — U+DFFF` 是一个空段，也就是说这个区间的码点不对应任何的字符，因此这些空段就可以用来映射辅助平面的字符。
-
-辅助平面共有 **220** 个字符位，因此表示这些字符至少需要 20 个二进制位。`UTF-16` 将这 20 个二进制位分成两半，前 10 位映射在 `U+D800 — U+DBFF`，称为**高位**（H），后 10 位映射在 `U+DC00 — U+DFFF`，称为**低位**（L）。这就相当于，将一个辅助平面的字符拆成了两个基本平面的字符来表示。
-
-因此，当遇到两个字节时，发现它的码点在 `U+D800 —U+DBFF`之间，就可以知道，它后面的两个字节的码点应该在 `U+DC00 — U+DFFF` 之间，这四个字节必须放在一起进行解读。
-
-**5. 举例说明**
-
-以 "**𡠀**" 字为例，它的 `Unicode` 码点为 `0x21800`，该码点超出了基本平面的范围，因此需要用四个字节来表示，步骤如下：
-
-- 首先计算超出部分的结果：`0x21800 - 0x10000`
-- 将上面的计算结果转为20位的二进制数，不足20位就在前面补0，结果为：`0001000110 0000000000`
-- 将得到的两个10位二进制数分别对应到两个区间中
-- `U+D800` 对应的二进制数为 `1101100000000000`， 将`0001000110`填充在它的后10 个二进制位，得到 `1101100001000110`，转成 16 进制数为 `0xD846`。同理，低位为 `0xDC00`，所以这个字的`UTF-16` 编码为 `0xD846 0xDC00`
-
-#### （4） UTF-32
-
-`UTF-32` 就是字符所对应编号的整数二进制形式，每个字符占四个字节，这个是直接进行转换的。该编码方式占用的储存空间较多，所以使用较少。
-
-比如“**马**” 字的Unicode编号是：`U+9A6C`，整数编号是`39532`，直接转化为二进制：`1001 1010 0110 1100`，这就是它的UTF-32编码。
-
-#### （5）总结
-
-**Unicode、UTF-8、UTF-16、UTF-32有什么区别？**
-
-- `Unicode` 是编码字符集（字符集），而`UTF-8`、`UTF-16`、`UTF-32`是字符集编码（编码规则）；
-- `UTF-16` 使用变长码元序列的编码方式，相较于定长码元序列的`UTF-32`算法更复杂，甚至比同样是变长码元序列的`UTF-8`也更为复杂，因为其引入了独特的**代理对**这样的代理机制；
-- `UTF-8`需要判断每个字节中的开头标志信息，所以如果某个字节在传送过程中出错了，就会导致后面的字节也会解析出错；而`UTF-16`不会判断开头标志，即使错也只会错一个字符，所以容错能力教强；
-- 如果字符内容全部英文或英文与其他文字混合，但英文占绝大部分，那么用`UTF-8`就比`UTF-16`节省了很多空间；而如果字符内容全部是中文这样类似的字符或者混合字符中中文占绝大多数，那么`UTF-16`就占优势了，可以节省很多空间；
-
-### 11. 常见的位运算符有哪些？其计算规则是什么？
-
-现代计算机中数据都是以二进制的形式存储的，即0、1两种状态，计算机对二进制数据进行的运算加减乘除等都是叫位运算，即将符号位共同参与运算的运算。
-
-常见的位运算有以下几种：
-
-| 运算符 | 描述 | 运算规则                                                 | 两个位都为0时，结果才为0 |
-| ------ | ---- | -------------------------------------------------------- | ------------------------ |
-| `&`    | 与   | 两个位都为1时，结果才为1                                 |                          |
-| `      | `    | 或                                                       |                          |
-| `^`    | 异或 | 两个位相同为0，相异为1                                   |                          |
-| `~`    | 取反 | 0变1，1变0                                               |                          |
-| `<<`   | 左移 | 各二进制位全部左移若干位，高位丢弃，低位补0              |                          |
-| `>>`   | 右移 | 各二进制位全部右移若干位，正数左补0，负数左补1，右边丢弃 |                          |
-
-#### 1. 按位与运算符（&）
-
-**定义：** 参加运算的两个数据**按二进制位**进行“与”运算。
-
-**运算规则：**
-
-```JavaScript
-0 & 0 = 0  
-0 & 1 = 0  
-1 & 0 = 0  
-1 & 1 = 1
-```
-
-总结：两位同时为1，结果才为1，否则结果为0。
-
-例如：3&5 即：
-
-```JavaScript
-0000 0011 
-   0000 0101 
- = 0000 0001
-```
-
-因此 3&5 的值为1。
-
-注意：负数按补码形式参加按位与运算。
-
-**用途：**
-
-**（1）判断奇偶**
-
-只要根据最未位是0还是1来决定，为0就是偶数，为1就是奇数。因此可以用`if ((i & 1) == 0)`代替`if (i % 2 == 0)`来判断a是不是偶数。
-
-**（2）清零**
-
-如果想将一个单元清零，即使其全部二进制位为0，只要与一个各位都为零的数值相与，结果为零。
-
-#### 2. 按位或运算符（|）
-
-**定义：** 参加运算的两个对象按二进制位进行“或”运算。
-
-**运算规则：**
-
-```JavaScript
-0 | 0 = 0
-0 | 1 = 1  
-1 | 0 = 1  
-1 | 1 = 1
-```
-
-总结：参加运算的两个对象只要有一个为1，其值为1。
-
-例如：3|5即：
-
-```JavaScript
-0000 0011
-  0000 0101 
-= 0000 0111
-```
-
-因此，3|5的值为7。
-
-注意：负数按补码形式参加按位或运算。
-
-#### 3. 异或运算符（^）
-
-**定义：** 参加运算的两个数据按二进制位进行“异或”运算。
-
-**运算规则：**
-
-```JavaScript
-0 ^ 0 = 0  
-0 ^ 1 = 1  
-1 ^ 0 = 1  
-1 ^ 1 = 0
-```
-
-总结：参加运算的两个对象，如果两个相应位相同为0，相异为1。
-
-例如：3|5即：
-
-```JavaScript
-0000 0011
-  0000 0101 
-= 0000 0110
-```
-
-因此，3^5的值为6。
-
-异或运算的性质:
-
-- 交换律：`(a^b)^c == a^(b^c)`
-- 结合律：`(a + b)^c == a^b + b^c`
-- 对于任何数x，都有 `x^x=0，x^0=x`
-- 自反性: `a^b^b=a^0=a`;
-
-#### 4. 取反运算符 (~)
-
-**定义：** 参加运算的一个数据按二进制进行“取反”运算。
-
-运算规则：
-
-```JavaScript
-~ 1 = 0
-~ 0 = 1
-```
-
-总结：对一个二进制数按位取反，即将0变1，1变0。
-
-例如：~6 即：
-
-```JavaScript
-0000 0110
-= 1111 1001
-```
-
-在计算机中，正数用原码表示，负数使用补码存储，首先看最高位，最高位1表示负数，0表示正数。此计算机二进制码为负数，最高位为符号位。
-
-当发现按位取反为负数时，就**直接取其补码**，变为十进制：
-
-```JavaScript
-0000 0110
-   = 1111 1001
-反码：1000 0110
-补码：1000 0111
-```
-
-因此，~6的值为-7。
-
-#### 5. 左移运算符（<<）
-
-**定义：** 将一个运算对象的各二进制位全部左移若干位，左边的二进制位丢弃，右边补0。
-
-设 a=1010 1110，a = a<< 2 将a的二进制位左移2位、右补0，即得a=1011 1000。
-
-若左移时舍弃的高位不包含1，则每左移一位，相当于该数乘以2。
-
-#### 6. 右移运算符（>>）
-
-**定义：** 将一个数的各二进制位全部右移若干位，正数左补0，负数左补1，右边丢弃。
-
-例如：a=a>>2 将a的二进制位右移2位，左补0 或者 左补1得看被移数是正还是负。
-
-操作数每右移一位，相当于该数除以2。
-
-#### 7. 原码、补码、反码
-
-上面提到了补码、反码等知识，这里就补充一下。
-
-计算机中的**有符号数**有三种表示方法，即原码、反码和补码。三种表示方法均有符号位和数值位两部分，符号位都是用0表示“正”，用1表示“负”，而数值位，三种表示方法各不相同。
-
-**（1）原码**
-
-原码就是一个数的二进制数。
-
-例如：10的原码为0000 1010
-
-**（2）反码**
-
-- 正数的反码与原码相同，如：10 反码为 0000 1010
-- 负数的反码为除符号位，按位取反，即0变1，1变0。
-
-例如：-10
-
-```JavaScript
-原码：1000 1010
-反码：1111 0101
-```
-
-**（3）补码**
-
-- 正数的补码与原码相同，如：10 补码为 0000 1010
-- 负数的补码是原码除符号位外的所有位取反即0变1，1变0，然后加1，也就是反码加1。
-
-例如：-10
-
-```JavaScript
-原码：1000 1010
-反码：1111 0101
-补码：1111 0110
-```
-
-### 12.* 为什么函数的 arguments 参数是类数组而不是数组？如何遍历类数组?
-
-`arguments`是一个对象，它的属性是从 0 开始依次递增的数字，还有`callee`和`length`等属性，与数组相似；但是它却没有数组常见的方法属性，如`forEach`, `reduce`等，所以叫它们类数组。
-
-要遍历类数组，有三个方法：
-
-（1）将数组的方法应用到类数组上，这时候就可以使用`call`和`apply`方法，如：
-
-```JavaScript
-function foo(){ 
-  Array.prototype.forEach.call(arguments, a => console.log(a))
-}
-```
-
-（2）使用Array.from方法将类数组转化成数组：‌
-
-```JavaScript
-function foo(){ 
-  const arrArgs = Array.from(arguments) 
-  arrArgs.forEach(a => console.log(a))
-}
-```
-
-（3）使用展开运算符将类数组转化成数组
-
-```JavaScript
-function foo(){ 
-    const arrArgs = [...arguments] 
-    arrArgs.forEach(a => console.log(a)) 
-}
-```
-
-### 13*. 什么是 DOM 和 BOM？
+### 3.* 如果new一个箭头函数的会怎么样
 
 **回答：**
 
-DOM（文档对象模型）是浏览器将 HTML 文档转换为 JavaScript 可操作的对象树结构，用于操作网页内容如文字、图片、按钮等元素；BOM（浏览器对象模型）是浏览器提供的与浏览器窗口交互的对象集合，用于操作浏览器本身如窗口、历史记录、弹窗等功能。简单来说，DOM 负责操作网页内容，BOM 负责操作浏览器功能，两者的根对象分别是 document 和 window。
+new一个箭头函数会报错，因为箭头函数没有自己的this而是捕获外层作用域的this，没有prototype属性，不能用作构造函数，所以禁止使用new关键字调用，箭头函数设计初衷是作为回调函数使用而非构造函数。
 
-- DOM 指的是文档对象模型，它指的是把文档当做一个对象，这个对象主要定义了处理网页内容的方法和接口。
-- BOM 指的是浏览器对象模型，它指的是把浏览器当做一个对象来对待，这个对象主要定义了与浏览器进行交互的法和接口。BOM的核心是 window，而 window 对象具有双重角色，它既是通过 js 访问浏览器窗口的一个接口，又是一个 Global（全局）对象。这意味着在网页中定义的任何对象，变量和函数，都作为全局对象的一个属性或者方法存在。window 对象含有 location 对象、navigator 对象、screen 对象等子对象，并且 DOM 的最根本的对象 document 对象也是 BOM 的 window 对象的子对象。
+箭头函数是ES6中的提出来的，它没有prototype，也没有自己的this指向，更不可以使用arguments参数，所以不能New一个箭头函数。
 
-### 14.* 对类数组对象的理解，如何转化为数组
+new操作符的实现步骤如下：
 
-一个拥有 length 属性和若干索引属性的对象就可以被称为类数组对象，类数组对象和数组类似，但是不能调用数组的方法。常见的类数组对象有 arguments 和 DOM 方法的返回结果，函数参数也可以被看作是类数组对象，因为它含有 length属性值，代表可接收的参数个数。
+1. 创建一个对象
+2. 将构造函数的作用域赋给新对象（也就是将对象的__proto__属性指向构造函数的prototype属性）
+3. 指向构造函数中的代码，构造函数中的this指向该对象（也就是为这个对象添加属性和方法）
+4. 返回新的对象
 
-常见的类数组转换为数组的方法有这样几种：
+所以，上面的第二、三步，箭头函数都是没有办法执行的。
 
-- 通过 call 调用数组的 slice 方法来实现转换
+### 4.* 箭头函数与普通函数的区别
+
+**回答：**
+
+箭头函数与普通函数的主要区别在于：
+
+箭头函数没有自己的this而是继承外层作用域的this且无法通过call/apply/bind改变，没有prototype属性不能用作构造函数，没有arguments对象需用剩余参数代替，不能用new调用，不能用作Generator函数，不能使用yield关键字，没有自己的super关键字，语法更简洁适合回调函数，而普通函数this指向调用者可改变、有prototype可作为构造函数、有arguments对象、可用new创建实例、可使用super关键字，适用于需要this绑定、作为构造函数或需要arguments对象的场景。
+
+**（1）箭头函数比普通函数更加简洁**
+
+- 如果没有参数，就直接写一个空括号即可
+- 如果只有一个参数，可以省去参数的括号
+- 如果有多个参数，用逗号分割
+- 如果函数体的返回值只有一句，可以省略大括号
+- 如果函数体不需要返回值，且只有一句话，可以给这个语句前面加一个void关键字。最常见的就是调用一个函数：
 
 ```JavaScript
-Array.prototype.slice.call(arrayLike);
+let fn = () => void doesNotReturn();
 ```
 
-- 通过 call 调用数组的 splice 方法来实现转换
+**（2）箭头函数没有自己的this**
+
+箭头函数不会创建自己的this， 所以它没有自己的this，它只会在自己作用域的上一层继承this。所以箭头函数中this的指向在它在定义时已经确定了，之后不会改变。
+
+**（3）箭头函数继承来的this指向永远不会改变**
 
 ```JavaScript
-Array.prototype.splice.call(arrayLike, 0);
-```
-
-- 通过 apply 调用数组的 concat 方法来实现转换
-
-```JavaScript
-Array.prototype.concat.apply([], arrayLike);
-```
-
-- 通过 Array.from 方法来实现转换
-
-```JavaScript
-Array.from(arrayLike);
-```
-
-### 15.* escape、encodeURI、encodeURIComponent 的区别
-
-- encodeURI
-  - `encodeURI` 用于对整个 URI 进行编码。它会将除了 URI 安全字符之外的所有字符编码。URI 安全字符包括字母、数字、连字符 `-`、下划线 `_`、波浪号 `~` 以及点 `.`。`encodeURI` 不会对 URI 中的保留字符进行编码，这些**保留字符**包括 `;`, `/`, `?`, `:`, `@`, `&`, `=`, `+`, `$`, `,`, `#`。
-  - 代码示例：
-
-```JavaScript
-const uri = "http://example.com/path/to/page?name=value&another=value";
-console.log(encodeURI(uri)); 
-// 输出: "http://example.com/path/to/page?name=value&another=value"
-```
-
-- encodeURIComponent
-  - `encodeURIComponent` 用于对 URI 的各个**组成部分**进行编码，例如查询参数或片段标识符。它会将除了 `-`, `_`, `.`, `~` 之外的所有非字母数字字符进行编码。`encodeURIComponent` 会对所有保留字符进行编码，因此它非常适合用于编码 URL 的各个组成部分。。
-  - 代码示例：
-
-```JavaScript
-const query = "name=value&another=value";
-console.log(encodeURIComponent(query)); 
-// 输出: "name%3Dvalue%26another%3Dvalue"
-```
-
-- escape
-  - `escape` 是一个较旧的函数，用于将字符串编码为适用于 URL 的格式。然而，`它已经被废弃`，并且不推荐在现代浏览器中使用。它的主要问题是它不能正确地处理 Unicode 字符，并且它的编码规则与现代 URL 编码标准不符。
-  - 和 encodeURI 的作用相同，不过它们对于 unicode 编码为 0xff 之外字符的时候会有区别，escape 是直接在字符的 unicode 编码前加上 %u，而 encodeURI 首先会将字符转换为 UTF-8 的格式，再在每个字节前加上 %。
-
-### 16*. 对AJAX的理解，实现一个AJAX请求
-
-AJAX是 Asynchronous JavaScript and XML 的缩写，指的是通过 JavaScript 的 异步通信，从服务器获取 XML 文档从中提取数据，再更新当前网页的对应部分，而不用刷新整个网页。
-
-创建AJAX请求的步骤：
-
-- **创建一个 XMLHttpRequest 对象。**
-- 在这个对象上**使用 open 方法创建一个 HTTP 请求**，open 方法所需要的参数是请求的方法、请求的地址、是否异步和用户的认证信息。
-- 在发起请求前，可以为这个对象**添加一些信息和监听函数**。比如说可以通过 setRequestHeader 方法来为请求添加头信息。还可以为这个对象添加一个状态监听函数。一个 XMLHttpRequest 对象一共有 5 个状态，当它的状态变化时会触发onreadystatechange 事件，可以通过设置监听函数，来处理请求成功后的结果。当对象的 readyState 变为 4 的时候，代表服务器返回的数据接收完成，这个时候可以通过判断请求的状态，如果状态是 2xx 或者 304 的话则代表返回正常。这个时候就可以通过 response 中的数据来对页面进行更新了。
-- 当对象的属性和监听函数设置完成后，最后调**用 sent 方法来向服务器发起请求**，可以传入参数作为发送的数据体。
-
-```JavaScript
-const SERVER_URL = "/server";
-let xhr = new XMLHttpRequest();
-// 创建 Http 请求
-xhr.open("GET", url, true);
-// 设置状态监听函数
-xhr.onreadystatechange = function() {
-  if (this.readyState !== 4) return;
-  // 当请求成功时
-  if (this.status === 200) {
-    handle(this.response);
-  } else {
-    console.error(this.statusText);
+var id = 'GLOBAL';
+var obj = {
+  id: 'OBJ',
+  a: function(){
+    console.log(this.id);
+  },
+  b: () => {
+    console.log(this.id);
   }
 };
-// 设置请求失败时的监听函数
-xhr.onerror = function() {
-  console.error(this.statusText);
-};
-// 设置请求头信息
-xhr.responseType = "json";
-xhr.setRequestHeader("Accept", "application/json");
-// 发送 Http 请求
-xhr.send(null);
+obj.a();    // 'OBJ'
+obj.b();    // 'GLOBAL'
+new obj.a()  // undefined
+new obj.b()  // Uncaught TypeError: obj.b is not a constructor
 ```
 
-使用Promise封装AJAX：
+对象obj的方法b是使用箭头函数定义的，这个函数中的this就永远指向它定义时所处的全局执行环境中的this，即便这个函数是作为对象obj的方法调用，this依旧指向Window对象。需要注意，定义对象的大括号`{}`是无法形成一个单独的执行环境的，它依旧是处于全局执行环境中。
+
+**（4）call()、apply()、bind()等方法不能改变箭头函数中this的指向**
 
 ```JavaScript
-// promise 封装实现：
-function getJSON(url) {
-  // 创建一个 promise 对象
-  let promise = new Promise(function(resolve, reject) {
-    let xhr = new XMLHttpRequest();
-    // 新建一个 http 请求
-    xhr.open("GET", url, true);
-    // 设置状态的监听函数
-    xhr.onreadystatechange = function() {
-      if (this.readyState !== 4) return;
-      // 当请求成功或失败时，改变 promise 的状态
-      if (this.status === 200) {
-        resolve(this.response);
-      } else {
-        reject(new Error(this.statusText));
+var id = 'Global';
+let fun1 = () => {
+    console.log(this.id)
+};
+fun1();                     // 'Global'
+fun1.call({id: 'Obj'});     // 'Global'
+fun1.apply({id: 'Obj'});    // 'Global'
+fun1.bind({id: 'Obj'})();   // 'Global'
+```
+
+**（5）箭头函数不能作为构造函数使用**
+
+构造函数在new的步骤在上面已经说过了，实际上第二步就是将函数中的this指向该对象。 但是由于箭头函数时没有自己的this的，且this指向外层的执行环境，且不能改变指向，所以不能当做构造函数使用。
+
+**（6）箭头函数没有自己的arguments**
+
+箭头函数没有自己的arguments对象。在箭头函数中访问arguments实际上获得的是它外层函数的arguments值。
+
+**（7）箭头函数没有prototype**
+
+**（8）箭头函数不能用作Generator函数，不能使用yeild关键字**
+
+### 5.* 箭头函数的**this**指向哪⾥？
+
+箭头函数不同于传统JavaScript中的函数，箭头函数并没有属于⾃⼰的this，它所谓的this是捕获其所在上下⽂的 this 值，作为⾃⼰的 this 值，并且由于没有属于⾃⼰的this，所以是不会被new调⽤的，这个所谓的this也不会被改变。
+
+可以⽤Babel理解⼀下箭头函数:
+
+```JavaScript
+// ES6 
+const obj = { 
+  getArrow() { 
+    return () => { 
+      console.log(this === obj); 
+    }; 
+  } 
+}
+```
+
+转化后：
+
+```JavaScript
+// ES5，由 Babel 转译
+var obj = { 
+   getArrow: function getArrow() { 
+     var _this = this; 
+     return function () { 
+        console.log(_this === obj); 
+     }; 
+   } 
+};
+```
+
+### 6. 扩展运算符的作用及使用场景
+
+**（1）对象扩展运算符**
+
+对象的扩展运算符(...)用于取出参数对象中的所有可遍历属性，拷贝到当前对象之中。
+
+```JavaScript
+let bar = { a: 1, b: 2 };
+let baz = { ...bar }; // { a: 1, b: 2 }
+```
+
+上述方法实际上等价于:
+
+```JavaScript
+let bar = { a: 1, b: 2 };
+let baz = Object.assign({}, bar); // { a: 1, b: 2 }
+```
+
+`Object.assign`方法用于对象的合并，将源对象`（source）`的所有可枚举属性，复制到目标对象`（target）`。`Object.assign`方法的第一个参数是目标对象，后面的参数都是源对象。(**如果目标对象与源对象有同名属性，或多个源对象有同名属性，则后面的属性会覆盖前面的属性**)。
+
+同样，如果用户自定义的属性，放在扩展运算符后面，则扩展运算符内部的同名属性会被覆盖掉。
+
+```JavaScript
+let bar = {a: 1, b: 2};
+let baz = {...bar, ...{a:2, b: 4}};  // {a: 2, b: 4}
+```
+
+利用上述特性就可以很方便的修改对象的部分属性。在`redux`中的`reducer`函数规定必须是**一个纯函数**，`reducer`中的`state`对象要求不能直接修改，可以通过扩展运算符把修改路径的对象都复制一遍，然后产生一个新的对象返回。
+
+需要注意：扩展运算符对**对象实例的拷贝属于浅拷贝**。
+
+**（2）数组扩展运算符**
+
+数组的扩展运算符可以将一个数组转为用逗号分隔的参数序列，且每次只能展开一层数组。
+
+```JavaScript
+console.log(...[1, 2, 3])
+// 1 2 3
+console.log(...[1, [2, 3, 4], 5])
+// 1 [2, 3, 4] 5
+```
+
+下面是数组的扩展运算符的应用：
+
+- **将数组转换为参数序列**
+
+```JavaScript
+function add(x, y) {
+  return x + y;
+}
+const numbers = [1, 2];
+add(...numbers) // 3
+```
+
+- **复制数组**
+
+```JavaScript
+const arr1 = [1, 2];
+const arr2 = [...arr1];
+```
+
+要记住：**扩展运算符(…)用于取出参数对象中的所有可遍历属性，拷贝到当前对象之中**，这里参数对象是个数组，数组里面的所有对象都是基础数据类型，将所有基础数据类型重新拷贝到新的数组中。
+
+- **合并数组**
+
+如果想在数组内合并数组，可以这样：
+
+```JavaScript
+const arr1 = ['two', 'three'];
+const arr2 = ['one', ...arr1, 'four', 'five'];
+// ["one", "two", "three", "four", "five"]
+```
+
+- **扩展运算符与解构赋值结合起来，用于生成数组**
+
+```JavaScript
+const [first, ...rest] = [1, 2, 3, 4, 5];
+first // 1
+rest  // [2, 3, 4, 5]
+```
+
+需要注意：**如果将扩展运算符用于数组赋值，只能放在参数的最后一位，否则会报错。**
+
+```JavaScript
+const [...rest, last] = [1, 2, 3, 4, 5];         // 报错
+const [first, ...rest, last] = [1, 2, 3, 4, 5];  // 报错
+```
+
+- **将字符串转为真正的数组**
+
+```JavaScript
+[...'hello']    // [ "h", "e", "l", "l", "o" ]
+```
+
+- **任何 Iterator 接口的对象，都可以用扩展运算符转为真正的数组**
+
+比较常见的应用是可以将某些数据结构转为数组：
+
+```JavaScript
+// arguments对象
+function foo() {
+  const args = [...arguments];
+}
+```
+
+用于替换`es5`中的`Array.prototype.slice.call(arguments)`写法。
+
+- **使用**`**Math**`**函数获取数组中特定的值**
+
+```JavaScript
+const numbers = [9, 4, 7, 1];
+Math.min(...numbers); // 1
+Math.max(...numbers); // 9
+```
+
+### 7. 对对象与数组的解构的理解
+
+解构是 ES6 提供的一种新的提取数据的模式，这种模式能够从对象或数组里有针对性地拿到想要的数值。
+
+**1）数组的解构**
+
+在解构数组时，以元素的位置为匹配条件来提取想要的数据的：
+
+```JavaScript
+const [a, b, c] = [1, 2, 3]
+```
+
+最终，a、b、c分别被赋予了数组第0、1、2个索引位的值：
+
+![img](https://secure2.wostatic.cn/static/qLe5MFqx2XRQAqtJDWd7oa/image.png?auth_key=1768103476-fu7mWciZ6ob6ERNkeHkas4-0-cb1a38b72770cfc62cc83a4e9bc6af7b)
+
+数组里的0、1、2索引位的元素值，精准地被映射到了左侧的第0、1、2个变量里去，这就是数组解构的工作模式。还可以通过给左侧变量数组设置空占位的方式，实现对数组中某几个元素的精准提取：
+
+```JavaScript
+const [a,,c] = [1,2,3]
+```
+
+通过把中间位留空，可以顺利地把数组第一位和最后一位的值赋给 a、c 两个变量：
+
+![img](https://secure2.wostatic.cn/static/vDcrxGKrQhCeTsr3U3q3kX/image.png?auth_key=1768103476-mrgyGc58k7ZTBKXBmCBLoV-0-baf74d9fabbb8a62aad64c748ba7efdf)
+
+**2）对象的解构**
+
+对象解构比数组结构稍微复杂一些，也更显强大。在解构对象时，是以属性的名称为匹配条件，来提取想要的数据的。现在定义一个对象：
+
+```JavaScript
+const stu = {
+  name: 'Bob',
+  age: 24
+}
+```
+
+假如想要解构它的两个自有属性，可以这样：
+
+```JavaScript
+const { name, age } = stu
+```
+
+这样就得到了 name 和 age 两个和 stu 平级的变量：
+
+![img](https://secure2.wostatic.cn/static/rqYLfzHrRVUskHjg4xDaia/image.png?auth_key=1768103477-4Ex5K66AWgpy4QHNAZh3dX-0-4fddc0504a1a99b25096dc128422d6f5)
+
+注意，对象解构严格以属性名作为定位依据，所以就算调换了 name 和 age 的位置，结果也是一样的：
+
+```JavaScript
+const { age, name } = stu
+```
+
+### 8. **如何提取高度嵌套的对象里的指定属性？**
+
+有时会遇到一些嵌套程度非常深的对象：
+
+```JavaScript
+const school = {
+   classes: {
+      stu: {
+         name: 'Bob',
+         age: 24,
       }
-    };
-    // 设置错误监听函数
-    xhr.onerror = function() {
-      reject(new Error(this.statusText));
-    };
-    // 设置响应的数据类型
-    xhr.responseType = "json";
-    // 设置请求头信息
-    xhr.setRequestHeader("Accept", "application/json");
-    // 发送 http 请求
-    xhr.send(null);
-  });
-  return promise;
+   }
 }
 ```
 
-### 17.* JavaScript为什么要进行变量提升，它导致了什么问题？
-
-**回答：**
-
-JavaScript 变量提升是编译器将变量和函数声明移动到作用域顶部的机制，其历史原因是为了简化早期编译器实现并允许在声明前调用函数，但这种机制导致声明与赋值分离造成理解困难、变量覆盖、函数声明优先级混乱、循环变量泄漏、全局污染和调试困难等问题，现代 JavaScript 推荐使用 let 和 const 替代 var，它们虽然也有提升但会进入暂时性死区（TDZ）在声明前访问会报错而非 undefined，配合严格模式、在作用域顶部声明变量、使用函数表达式等最佳实践可以有效避免变量提升带来的问题。
-
-变量提升的表现是，无论在函数中何处位置声明的变量，好像都被提升到了函数的首部，可以在变量声明前访问到而不会报错。
-
-造成变量声明提升的**本质原因**是 js 引擎在代码执行前有一个解析的过程，创建了执行上下文，初始化了一些代码执行时需要用到的对象。当访问一个变量时，会到当前执行上下文中的作用域链中去查找，而作用域链的首端指向的是当前执行上下文的变量对象，这个变量对象是执行上下文的一个属性，它包含了函数的形参、所有的函数和变量声明，这个对象的是在代码解析的时候创建的。
-
-首先要知道，JS在拿到一个变量或者一个函数的时候，会有两步操作，即解析和执行。
-
-- **在解析阶段**，JS会检查语法，并对函数进行预编译。解析的时候会先创建一个全局执行上下文环境，先把代码中即将执行的变量、函数声明都拿出来，变量先赋值为undefined，函数先声明好可使用。在一个函数执行之前，也会创建一个函数执行上下文环境，跟全局执行上下文类似，不过函数执行上下文会多出this、arguments和函数的参数。
-- **在执行阶段**，就是按照代码的顺序依次执行。
-
-那为什么会进行变量提升呢？主要有以下两个原因：
-
-- 提高性能
-- 容错性更好
-
-**（1）提高性能**
-
-在JS代码执行之前，会进行语法检查和预编译，并且这一操作只进行一次。这么做就是为了提高性能，如果没有这一步，那么每次执行代码前都必须重新解析一遍该变量（函数），而这是没有必要的，因为变量（函数）的代码并不会改变，解析一遍就够了。
-
-在解析的过程中，还会为函数生成预编译代码。在预编译时，会统计声明了哪些变量、创建了哪些函数，并对函数的代码进行压缩，去除注释、不必要的空白等。这样做的好处就是每次执行函数时都可以直接为该函数分配栈空间（不需要再解析一遍去获取代码中声明了哪些变量，创建了哪些函数），并且因为代码压缩的原因，代码执行也更快了。
-
-**（2）容错性更好**
-
-变量提升可以在一定程度上提高JS的容错性，看下面的代码：
+像此处的 name 这个变量，嵌套了四层，此时如果仍然尝试老方法来提取它：
 
 ```JavaScript
-a = 1;
-var a;
-console.log(a);
+const { name } = school
 ```
 
-如果没有变量提升，这两行代码就会报错，但是因为有了变量提升，这段代码就可以正常执行。
-
-虽然，在可以开发过程中，可以完全避免这样写，但是有时代码很复杂的时候。可能因为疏忽而先使用后定义了，这样也不会影响正常使用。由于变量提升的存在，而会正常运行。
-
-**总结：**
-
-- 解析和预编译过程中的声明提升可以提高性能，让函数可以在执行时预先为变量分配栈空间
-- 声明提升还可以提高JS代码的容错性，使一些不规范的代码也可以正常执行
-
-变量提升虽然有一些优点，但是他也会造成一定的问题，在ES6中提出了let、const来定义变量，它们就没有变量提升的机制。下面看一下变量提升可能会导致的问题：
+显然是不奏效的，因为 school 这个对象本身是没有 name 这个属性的，name 位于 school 对象的“儿子的儿子”对象里面。要想把 name 提取出来，一种比较笨的方法是逐层解构：
 
 ```JavaScript
-var tmp = new Date();
+const { classes } = school
+const { stu } = classes
+const { name } = stu
+name // 'Bob'
+```
 
-function fn(){
-  console.log(tmp);
-  if(false){
-    var tmp = 'hello world';
+但是还有一种更标准的做法，可以用一行代码来解决这个问题：
+
+```JavaScript
+const { classes: { stu: { name } }} = school
+       
+console.log(name)  // 'Bob'
+```
+
+可以在解构出来的变量名右侧，通过冒号+{目标属性名}这种形式，进一步解构它，一直解构到拿到目标数据为止。
+
+### 9.* 对 rest 参数的理解
+
+扩展运算符被用在函数形参上时，**它还可以把一个分离的参数序列整合成一个数组**：
+
+```JavaScript
+function mutiple(...args) {
+  let result = 1;
+  for (var val of args) {
+    result *= val;
   }
+  return result;
 }
-
-fn();  // undefined
+mutiple(1, 2, 3, 4) // 24
 ```
 
-在这个函数中，原本是要打印出外层的tmp变量，但是因为变量提升的问题，内层定义的tmp被提到函数内部的最顶部，相当于覆盖了外层的tmp，所以打印结果为undefined。
+这里，传入 mutiple 的是四个分离的参数，但是如果在 mutiple 函数里尝试输出 args 的值，会发现它是一个数组：
 
 ```JavaScript
-var tmp = 'hello world';
-
-for (var i = 0; i < tmp.length; i++) {
-  console.log(tmp[i]);
+function mutiple(...args) {
+  console.log(args)
 }
-
-console.log(i); // 11
+mutiple(1, 2, 3, 4) // [1, 2, 3, 4]
 ```
 
-由于遍历时定义的i会变量提升成为一个全局变量，在函数结束之后不会被销毁，所以打印出来11。
+这就是 … rest运算符的又一层威力了，它可以把函数的多个入参收敛进一个数组里。这一点**经常用于获取函数的多余参数，或者像上面这样处理函数参数个数不确定的情况。**
 
-### 18. 什么是尾调用，使用尾调用有什么好处？
+### 10.* ES6中模板语法与字符串处理
 
-尾调用指的是函数的最后一步调用另一个函数。代码执行是基于执行栈的，所以当在一个函数里调用另一个函数时，会保留当前的执行上下文，然后再新建另外一个执行上下文加入栈中。使用尾调用的话，因为已经是函数的最后一步，所以这时可以不必再保留当前的执行上下文，从而节省了内存，这就是尾调用优化。但是 ES6 的尾调用优化只在严格模式下开启，正常模式是无效的。
-
-### 19.*  **ES6**模块与**CommonJS**模块有什么异同？
-
-**回答：**
-
-ES6模块与CommonJS模块都解决了JavaScript模块化问题并避免全局污染，但核心差异在于加载机制：CommonJS采用运行时加载和值拷贝，支持动态导入但无法静态分析和tree-shaking，语法为require/exports；
-
-ES6模块采用编译时加载和动态绑定，支持静态分析和tree-shaking优化，语法为import/export，this指向undefined而非CommonJS的{}
-
-ES6 Module和CommonJS模块的区别：
-
-- CommonJS
-  - 使用 `require` 函数来加载模块，使用 `module.exports` 或 `exports` 对象来导出模块中的变量、函数或类，没有默认导出的概念，所有导出都是显式的。
-  - 是动态加载的，依赖关系**在运行时确定**；不支持树摇，必须加载整个模块才能使用其中的一个导出；可以在严格模式或非严格模式下执行。
-  - 是对模块的浅拷⻉，ES6 Module是对模块的引⽤，即ES6 Module只存只读，不能改变其值，也就是指针指向不能变，类似const；
-- ES6 模块
-  - 使用 `import` 语句导入模块中的导出；使用 `export` 语句导出模块中的变量、函数或类；可以使用 `export default` 来导出一个默认的导出项。
-  - 是**静态分析**的，这意味着在执行代码之前就已经确定了模块的依赖关系；**支持树摇**（Tree Shaking），可以排除未使用的导出；使用严格模式（strict mode）执行。
-  - import的接⼝是read-only（只读状态），不能修改其变量值。 即不能修改其变量的指针指向，但可以改变变量内部指针指向，可以对commonJS对重新赋值（改变指针指向），但是对ES6 Module赋值会编译报错。
-
-ES6 Module和CommonJS模块的共同点：
-
-- CommonJS和ES6 Module都可以对引⼊的对象进⾏赋值，即对对象内部属性的值进⾏改变。
-
-### 20. 常见的DOM操作有哪些
-
-#### 1）DOM 节点的获取
-
-DOM 节点的获取的API及使用：
+ES6 提出了“模板语法”的概念。在 ES6 以前，拼接字符串是很麻烦的事情：
 
 ```JavaScript
-getElementById // 按照 id 查询
-getElementsByTagName // 按照标签名查询
-getElementsByClassName // 按照类名查询
-querySelectorAll // 按照 css 选择器查询
-
-// 按照 id 查询
-var imooc = document.getElementById('imooc') // 查询到 id 为 imooc 的元素
-// 按照标签名查询
-var pList = document.getElementsByTagName('p')  // 查询到标签为 p 的集合
-console.log(divList.length)
-console.log(divList[0])
-// 按照类名查询
-var moocList = document.getElementsByClassName('mooc') // 查询到类名为 mooc 的集合
-// 按照 css 选择器查询
-var pList = document.querySelectorAll('.mooc') // 查询到类名为 mooc 的集合
+var name = 'css'   
+var career = 'coder' 
+var hobby = ['coding', 'writing']
+var finalString = 'my name is ' + name + ', I work as a ' + career + ', I love ' + hobby[0] + ' and ' + hobby[1]
 ```
 
-#### 2）DOM 节点的创建
-
-**创建一个新节点，并把它添加到指定节点的后面。** 已知的 HTML 结构如下：
-
-```HTML
-<html>
-  <head>
-    <title>DEMO</title>
-  </head>
-  <body>
-    <div id="container"> 
-      <h1 id="title">我是标题</h1>
-    </div>   
-  </body>
-</html>
-```
-
-要求添加一个有内容的 span 节点到 id 为 title 的节点后面，做法就是：
+仅仅几个变量，写了这么多加号，还要时刻小心里面的空格和标点符号有没有跟错地方。但是有了模板字符串，拼接难度直线下降：
 
 ```JavaScript
-// 首先获取父节点
-var container = document.getElementById('container')
-// 创建新节点
-var targetSpan = document.createElement('span')
-// 设置 span 节点的内容
-targetSpan.innerHTML = 'hello world'
-// 把新创建的元素塞进父节点里去
-container.appendChild(targetSpan)
+var name = 'css'   
+var career = 'coder' 
+var hobby = ['coding', 'writing']
+var finalString = `my name is ${name}, I work as a ${career} I love ${hobby[0]} and ${hobby[1]}`
 ```
 
-#### 3）DOM 节点的删除
+字符串不仅更容易拼了，也更易读了，代码整体的质量都变高了。这就是模板字符串的第一个优势——允许用${}的方式嵌入变量。但这还不是问题的关键，模板字符串的关键优势有两个：
 
-**删除指定的 DOM 节点，** 已知的 HTML 结构如下：
+- 在模板字符串中，空格、缩进、换行都会被保留
+- 模板字符串完全支持“运算”式的表达式，可以在${}里完成一些计算
+
+基于第一点，可以在模板字符串里无障碍地直接写 html 代码：
 
 ```JavaScript
-<html>
-  <head>
-    <title>DEMO</title>
-  </head>
-  <body>
-    <div id="container"> 
-      <h1 id="title">我是标题</h1>
-    </div>   
-  </body>
-</html>
+let list = `
+  <ul>
+    <li>列表项1</li>
+    <li>列表项2</li>
+  </ul>
+`;
+console.log(message); // 正确输出，不存在报错
 ```
 
-需要删除 id 为 title 的元素，做法是：
+基于第二点，可以把一些简单的计算和调用丢进 ${} 来做：
 
 ```JavaScript
-// 获取目标元素的父元素
-var container = document.getElementById('container')
-// 获取目标元素
-var targetNode = document.getElementById('title')
-// 删除目标元素
-container.removeChild(targetNode)
-```
-
-或者通过子节点数组来完成删除：
-
-```JavaScript
-// 获取目标元素的父元素
-var container = document.getElementById('container')
-// 获取目标元素
-var targetNode = container.childNodes[1]
-// 删除目标元素
-container.removeChild(targetNode)
-```
-
-#### 4）修改 DOM 元素
-
-修改 DOM 元素这个动作可以分很多维度，比如说移动 DOM 元素的位置，修改 DOM 元素的属性等。
-
-**将指定的两个 DOM 元素交换位置，** 已知的 HTML 结构如下：
-
-```JavaScript
-<html>
-  <head>
-    <title>DEMO</title>
-  </head>
-  <body>
-    <div id="container"> 
-      <h1 id="title">我是标题</h1>
-      <p id="content">我是内容</p>
-    </div>   
-  </body>
-</html>
-```
-
-现在需要调换 title 和 content 的位置，可以考虑 insertBefore 或者 appendChild：
-
-```JavaScript
-// 获取父元素
-var container = document.getElementById('container')   
- 
-// 获取两个需要被交换的元素
-var title = document.getElementById('title')
-var content = document.getElementById('content')
-// 交换两个元素，把 content 置于 title 前面
-container.insertBefore(content, title)
-```
-
-### 21. use strict是什么意思 ? 使用它区别是什么？
-
-use strict 是一种 ECMAscript5 添加的（严格模式）运行模式，这种模式使得 Javascript 在更严格的条件下运行。设立严格模式的目的如下：
-
-- 消除 Javascript 语法的不合理、不严谨之处，减少怪异行为;
-- 消除代码运行的不安全之处，保证代码运行的安全；
-- 提高编译器效率，增加运行速度；
-- 为未来新版本的 Javascript 做好铺垫。
-
-区别：
-
-- 禁止使用 with 语句。
-- 禁止 this 关键字指向全局对象。
-- 对象不能有重名的属性。
-
-### 22.*  如何判断一个对象是否属于某个类？
-
-- 第一种方式，使用 instanceof 运算符来判断构造函数的 prototype 属性是否出现在对象的原型链中的任何位置。
-- 第二种方式，通过对象的 constructor 属性来判断，对象的 constructor 属性指向该对象的构造函数，但是这种方式不是很安全，因为 constructor 属性可以被改写。
-- 第三种方式，如果需要判断的是某个内置的引用类型的话，可以使用 Object.prototype.toString() 方法来打印对象的[[Class]] 属性来进行判断。
-
-### 23. 强类型语言和弱类型语言的区别
-
-- **强类型语言**：强类型语言也称为强类型定义语言，是一种总是强制类型定义的语言，要求变量的使用要严格符合定义，所有变量都必须先定义后使用。Java和C++等语言都是强制类型定义的，也就是说，一旦一个变量被指定了某个数据类型，如果不经过强制转换，那么它就永远是这个数据类型了。例如你有一个整数，如果不显式地进行转换，你不能将其视为一个字符串。
-- **弱类型语言**：弱类型语言也称为弱类型定义语言，与强类型定义相反。JavaScript语言就属于弱类型语言。简单理解就是一种变量类型可以被忽略的语言。比如JavaScript是弱类型定义的，在JavaScript中就可以将字符串'12'和整数3进行连接得到字符串'123'，在相加的时候会进行强制类型转换。
-
-两者对比：强类型语言在速度上可能略逊色于弱类型语言，但是强类型语言带来的严谨性可以有效地帮助避免许多错误。
-
-### 24. 解释性语言和编译型语言的区别
-
-（1）解释型语言
-
-使用专门的解释器对源程序逐行解释成特定平台的机器码并立即执行。是代码在执行时才被解释器一行行动态翻译和执行，而不是在执行之前就完成翻译。解释型语言不需要事先编译，其直接将源代码解释成机器码并立即执行，所以只要某一平台提供了相应的解释器即可运行该程序。其特点总结如下
-
-- 解释型语言每次运行都需要将源代码解释称机器码并执行，效率较低；
-- 只要平台提供相应的解释器，就可以运行源代码，所以可以方便源程序移植；
-- JavaScript、Python等属于解释型语言。
-
-（2）编译型语言
-
-使用专门的编译器，针对特定的平台，将高级语言源代码一次性的编译成可被该平台硬件执行的机器码，并包装成该平台所能识别的可执行性程序的格式。在编译型语言写的程序执行之前，需要一个专门的编译过程，把源代码编译成机器语言的文件，如exe格式的文件，以后要再运行时，直接使用编译结果即可，如直接运行exe文件。因为只需编译一次，以后运行时不需要编译，所以编译型语言执行效率高。其特点总结如下：
-
-- 一次性的编译成平台相关的机器语言文件，运行时脱离开发环境，运行效率高；
-- 与特定平台相关，一般无法移植到其他平台；
-- C、C++等属于编译型语言。
-
-**两者主要区别在于：** 前者源程序编译后即可在该平台运行，后者是在运行期间才编译。所以前者运行速度快，后者跨平台性好。
-
-### 25*. for...in和for...of的区别
-
-for…of 是ES6新增的遍历方式，允许遍历一个含有iterator接口的数据结构（数组、对象等）并且返回各项的值，和ES3中的for…in的区别如下
-
-- for…of 遍历获取的是对象的键值，for…in 获取的是对象的键名；
-- for… in 会遍历对象的整个原型链，性能非常差不推荐使用，而 for … of 只遍历当前对象不会遍历原型链；
-
-### 26. 如何使用for...of遍历对象
-
-for…of是作为ES6新增的遍历方式，允许遍历一个含有iterator接口的数据结构（数组、对象等）并且返回各项的值，普通的对象用for..of遍历是会报错的。
-
-如果需要遍历的对象是类数组对象，用Array.from转成数组即可。
-
-```JavaScript
-var obj = {
-    0:'one',
-    1:'two',
-    length: 2
-};
-obj = Array.from(obj);
-for(var k of obj){
-    console.log(k)
+function add(a, b) {
+  const finalString = `${a} + ${b} = ${a+b}`
+  console.log(finalString)
 }
+add(1, 2) // 输出 '1 + 2 = 3'
 ```
 
-如果不是类数组对象，就给对象添加一个[Symbol.iterator]属性，并指向一个迭代器即可。
+除了模板语法外， ES6中还新增了一系列的字符串方法用于提升开发效率：
+
+- **存在性判定**：在过去，当判断一个字符/字符串是否在某字符串中时，只能用 indexOf > -1 来做。现在 ES6 提供了三个方法：includes、startsWith、endsWith，它们都会返回一个布尔值来告诉你是否存在。
+- - **includes**：判断字符串与子串的包含关系：
 
 ```JavaScript
-//方法一：
-var obj = {
-    a:1,
-    b:2,
-    c:3
-};
-
-obj[Symbol.iterator] = function(){
-  var keys = Object.keys(this);
-  var count = 0;
-  return {
-    next(){
-      if(count<keys.length){
-        return {value: obj[keys[count++]],done:false};
-      }else{
-        return {value:undefined,done:true};
-      }
-    }
-  }
-};
-
-for(var k of obj){
-  console.log(k);
-}
-
-// 方法二
-var obj = {
-    a:1,
-    b:2,
-    c:3
-};
-obj[Symbol.iterator] = function*(){
-    var keys = Object.keys(obj);
-    for(var k of keys){
-        yield [k,obj[k]]
-    }
-};
-
-for(var [k,v] of obj){
-    console.log(k,v);
-}
+const son = 'haha' 
+const father = 'xixi haha hehe'
+father.includes(son) // true
 ```
 
-### 27. ajax、axios、fetch的区别
-
-**（1）AJAX**
-
-Ajax 即“AsynchronousJavascriptAndXML”（异步 JavaScript 和 XML），是指一种创建交互式[网页](https://link.zhihu.com/?target=https://baike.baidu.com/item/网页)应用的网页开发技术。它是一种在无需重新加载整个网页的情况下，能够更新部分网页的技术。通过在后台与服务器进行少量数据交换，Ajax 可以使网页实现异步更新。这意味着可以在不重新加载整个网页的情况下，对网页的某部分进行更新。传统的网页（不使用 Ajax）如果需要更新内容，必须重载整个网页页面。其缺点如下：
-
-- 本身是针对MVC编程，不符合前端MVVM的浪潮
-- 基于原生XHR开发，XHR本身的架构不清晰
-- 不符合关注分离（Separation of Concerns）的原则
-- 配置和调用方式非常混乱，而且基于事件的异步模型不友好。
-
-**（2）Fetch**
-
-fetch号称是AJAX的替代品，是在ES6出现的，使用了ES6中的promise对象。Fetch是基于promise设计的。Fetch的代码结构比起ajax简单多。**fetch不是ajax的进一步封装，而是原生js，没有使用XMLHttpRequest对象**。
-
-fetch的优点：
-
-- 语法简洁，更加语义化
-- 基于标准 Promise 实现，支持 async/await
-- 更加底层，提供的API丰富（request, response）
-- 脱离了XHR，是ES规范里新的实现方式
-
-fetch的缺点：
-
-- fetch只对网络请求报错，对400，500都当做成功的请求，服务器返回 400，500 错误码时并不会 reject，只有网络错误这些导致请求不能完成时，fetch 才会被 reject。
-- fetch默认不会带cookie，需要添加配置项： fetch(url, {credentials: 'include'})
-- fetch不支持abort，不支持超时控制，使用setTimeout及Promise.reject的实现的超时控制并不能阻止请求过程继续在后台运行，造成了流量的浪费
-- fetch没有办法原生监测请求的进度，而XHR可以
-
-**（3）Axios**
-
-Axios 是一种基于Promise封装的HTTP客户端，其特点如下：
-
-- 浏览器端发起XMLHttpRequests请求
-- node端发起http请求
-- 支持Promise API
-- 监听请求和返回
-- 对请求和返回进行转化
-- 取消请求
-- 自动转换json数据
-- 客户端支持抵御XSRF攻击
-
-### 28.* 数组的遍历方法有哪些
-
-总结：forEach，map，filter，for...of，find
-
-| ******方法**              | ******是否改变原数组** | ******特点**                                                 |
-| ------------------------- | ---------------------- | ------------------------------------------------------------ |
-| forEach()                 | 是                     | 数组方法，会改变原数组，没有返回值                           |
-| map()                     | 否                     | 数组方法，不改变原数组，有返回值，可链式调用                 |
-| filter()                  | 否                     | 数组方法，过滤数组，返回包含符合条件的元素的数组，可链式调用 |
-| for...of                  | 否                     | for...of遍历具有Iterator迭代器的对象的属性，返回的是数组的元素、对象的属性值，不能遍历普通的obj对象，将异步循环变成同步循环 |
-| every() 和 some()         | 否                     | 数组方法，some()只要有一个是true，便返回true；而every()只要有一个是false，便返回false. |
-| find() 和 findIndex()     | 否                     | 数组方法，find()返回的是第一个符合条件的值；findIndex()返回的是第一个返回条件的值的索引值 |
-| reduce() 和 reduceRight() | 否                     | 数组方法，reduce()对数组正序操作；reduceRight()对数组逆序操作 |
-
-### 29.* forEach和map方法有什么区别
-
-这方法都是用来遍历数组的，两者区别如下：
-
-- forEach()方法会针对每一个元素执行提供的函数，对数据的操作会改变原数组，该方法没有返回值；
-- map()方法不会改变原数组的值，返回一个新数组，新数组中的值为原数组调用函数处理之后的值；
-
-### 30. addEventListener()方法的参数和使用
-
-**EventTarget.addEventListener()** 方法将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。 事件目标可以是一个文档上的元素 Element，Document和Window或者任何其他支持事件的对象。
-
-addEventListener()的工作原理是将实现EventListener的函数或对象添加到调用它的EventTarget上的指定事件类型的事件侦听器列表中。
-
-它的使用语法如下：
+- - **startsWith**：判断字符串是否以某个/某串字符开头：
 
 ```JavaScript
-target.addEventListener(type, listener, options);
-target.addEventListener(type, listener, useCapture);
-target.addEventListener(type, listener, useCapture, wantsUntrusted);  
+const father = 'xixi haha hehe'
+father.startsWith('haha') // false
+father.startsWith('xixi') // true
 ```
 
-其中参数如下：
+- - **endsWith**：判断字符串是否以某个/某串字符结尾：
 
-**（1）type**
+```JavaScript
+const father = 'xixi haha hehe'
+  father.endsWith('hehe') // true
+```
 
-表示监听事件类型的字符串。
+- **自动重复**：可以使用 repeat 方法来使同一个字符串输出多次（被连续复制多次）：
 
-**（2）listener**
-
-当所监听的事件类型触发时，会接收到一个事件通知（实现了 Event 接口的对象）对象。listener 必须是一个实现了 EventListener 接口的对象，或者是一个函数。
-
-**（3）options 可选**
-
-一个指定有关 listener 属性的可选参数**对象**。可用的选项如下：
-
-- capture:  Boolean，表示 listener 会在该类型的事件捕获阶段传播到该 EventTarget 时触发。
-- once:  Boolean，表示 listener 在添加之后最多只调用一次。如果是 true， listener 会在其被调用之后自动移除。
-- passive: Boolean，设置为true时，表示 listener 永远不会调用 preventDefault()。如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告。
-- signal：AbortSignal，该 AbortSignal 的 abort() 方法被调用时，监听器会被移除。
-
-**（4）useCapture**  **可选**
-
-Boolean，在DOM树中，注册了listener的元素， 是否要先于它下面的EventTarget，调用该listener。 当useCapture(设为true) 时，沿着DOM树向上冒泡的事件，不会触发listener。当一个元素嵌套了另一个元素，并且两个元素都对同一事件注册了一个处理函数时，所发生的事件冒泡和事件捕获是两种不同的事件传播方式。事件传播模式决定了元素以哪个顺序接收事件。如果没有指定， useCapture 默认为 false 。
-
-**（5）wantsUntrusted**
-
-如果为 true , 则事件处理程序会接收网页自定义的事件。此参数只适用于 Gecko（chrome的默认值为true，其他常规网页的默认值为false），主要用于附加组件的代码和浏览器本身。
+```JavaScript
+const sourceCode = 'repeat for 3 times;'
+const repeated = sourceCode.repeat(3) 
+console.log(repeated) // repeat for 3 times;repeat for 3 times;repeat for 3 times;
+```

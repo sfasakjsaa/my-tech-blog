@@ -1276,5 +1276,95 @@
     "isFrequent": false,
     "createdAt": "2026-01-11T03:48:39.806Z",
     "updatedAt": "2026-01-11T03:48:39.806Z"
+  },
+  {
+    "id": 1768103590262,
+    "title": "let、const、var的区别",
+    "content": "<strong>回答：</strong><br><br>1. let和const具有块级作用域而var是函数作用域<br>2. let和const不存在变量提升而var存在变量提升<br>3. let和const不能重复声明而var可以<br>4. const声明后不能重新赋值而let和var可以<br>5. var全局声明会挂载到window对象而let和const不会<br><br><strong>解析：</strong><br><br><strong>（1）块级作用域：</strong>块作用域由 <code>{ }</code>包括，let和const具有块级作用域，var不存在块级作用域。块级作用域解决了ES5中的两个问题：<br><br><li>内层变量可能覆盖外层变量</li><br><li>用来计数的循环变量泄露为全局变量</li><br><br><strong>（2）变量提升：</strong>var存在变量提升，let和const不存在变量提升，即在变量只能在声明之后使用，否在会报错。<br><br><strong>（3）给全局添加属性：</strong>浏览器的全局对象是window，Node的全局对象是global。var声明的变量为全局变量，并且会将该变量添加为全局对象的属性，但是let和const不会。<br><br><strong>（4）重复声明：</strong>var声明变量时，可以重复声明变量，后声明的同名变量会覆盖之前声明的遍历。const和let不允许重复声明变量。<br><br><strong>（5）暂时性死区：在使用let、const命令声明变量之前，该变量都是不可用的。这在语法上，称为</strong>暂时性死区。使用var声明的变量不存在暂时性死区。<br><br><strong>（6）初始值设置：</strong>在变量声明时，var 和 let 可以不用设置初始值。而const声明变量必须设置初始值。<br><br><strong>（7）指针指向：</strong>let和const都是ES6新增的用于创建变量的语法。 let创建的变量是可以更改指针指向（可以重新赋值）。但const声明的变量是不允许改变指针的指向。<br><br>| <strong>区别</strong>           | <strong>var</strong> | <strong>let</strong> | <strong>const</strong> |<br>| ------------------ | ------- | ------- | --------- |<br>| 是否有块级作用域   | ×       | ✔️       | ✔️         |<br>| 是否存在变量提升   | ✔️       | ×       | ×         |<br>| 是否添加全局属性   | ✔️       | ×       | ×         |<br>| 能否重复声明变量   | ✔️       | ×       | ×         |<br>| 是否存在暂时性死区 | ×       | ✔️       | ✔️         |<br>| 是否必须设置初始值 | ×       | ×       | ✔️         |<br>| 能否改变指针指向   | ✔️       | ✔️       | ×         |",
+    "categoryId": "1768000001005",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590263,
+    "title": "const对象的属性可以修改吗",
+    "content": "<strong>回答：</strong><br><br>const对象的属性可以修改，因为const保证的是变量指向的内存地址不变而不是对象内容不变，所以可以修改、新增或删除对象的属性，但不能重新赋值整个对象<br><br>const保证的并不是变量的值不能改动，而是变量指向的那个内存地址不能改动。对于基本类型的数据（数值、字符串、布尔值），其值就保存在变量指向的那个内存地址，因此等同于常量。<br><br>但对于引用类型的数据（主要是对象和数组）来说，变量指向数据的内存地址，保存的只是一个指针，const只能保证这个指针是固定不变的，至于它指向的数据结构是不是可变的，就完全不能控制了。",
+    "categoryId": "1768000001005",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590264,
+    "title": "如果new一个箭头函数的会怎么样",
+    "content": "<strong>回答：</strong><br><br>new一个箭头函数会报错，因为箭头函数没有自己的this而是捕获外层作用域的this，没有prototype属性，不能用作构造函数，所以禁止使用new关键字调用，箭头函数设计初衷是作为回调函数使用而非构造函数。<br><br>箭头函数是ES6中的提出来的，它没有prototype，也没有自己的this指向，更不可以使用arguments参数，所以不能New一个箭头函数。<br><br>new操作符的实现步骤如下：<br><br>1. 创建一个对象<br>2. 将构造函数的作用域赋给新对象（也就是将对象的__proto__属性指向构造函数的prototype属性）<br>3. 指向构造函数中的代码，构造函数中的this指向该对象（也就是为这个对象添加属性和方法）<br>4. 返回新的对象<br><br>所以，上面的第二、三步，箭头函数都是没有办法执行的。",
+    "categoryId": "1768000001005",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590265,
+    "title": "箭头函数与普通函数的区别",
+    "content": "<strong>回答：</strong><br><br>箭头函数与普通函数的主要区别在于：<br><br>箭头函数没有自己的this而是继承外层作用域的this且无法通过call/apply/bind改变，没有prototype属性不能用作构造函数，没有arguments对象需用剩余参数代替，不能用new调用，不能用作Generator函数，不能使用yield关键字，没有自己的super关键字，语法更简洁适合回调函数，而普通函数this指向调用者可改变、有prototype可作为构造函数、有arguments对象、可用new创建实例、可使用super关键字，适用于需要this绑定、作为构造函数或需要arguments对象的场景。<br><br><strong>（1）箭头函数比普通函数更加简洁</strong><br><br><li>如果没有参数，就直接写一个空括号即可</li><br><li>如果只有一个参数，可以省去参数的括号</li><br><li>如果有多个参数，用逗号分割</li><br><li>如果函数体的返回值只有一句，可以省略大括号</li><br><li>如果函数体不需要返回值，且只有一句话，可以给这个语句前面加一个void关键字。最常见的就是调用一个函数：</li><br><br><pre><code class=\"language-JavaScript\">let fn = () => void doesNotReturn();<br></code></pre><br><br><strong>（2）箭头函数没有自己的this</strong><br><br>箭头函数不会创建自己的this， 所以它没有自己的this，它只会在自己作用域的上一层继承this。所以箭头函数中this的指向在它在定义时已经确定了，之后不会改变。<br><br><strong>（3）箭头函数继承来的this指向永远不会改变</strong><br><br><pre><code class=\"language-JavaScript\">var id = 'GLOBAL';<br>var obj = {<br>  id: 'OBJ',<br>  a: function(){<br>    console.log(this.id);<br>  },<br>  b: () => {<br>    console.log(this.id);<br>  }<br>};<br>obj.a();    // 'OBJ'<br>obj.b();    // 'GLOBAL'<br>new obj.a()  // undefined<br>new obj.b()  // Uncaught TypeError: obj.b is not a constructor<br></code></pre><br><br>对象obj的方法b是使用箭头函数定义的，这个函数中的this就永远指向它定义时所处的全局执行环境中的this，即便这个函数是作为对象obj的方法调用，this依旧指向Window对象。需要注意，定义对象的大括号<code>{}</code>是无法形成一个单独的执行环境的，它依旧是处于全局执行环境中。<br><br><strong>（4）call()、apply()、bind()等方法不能改变箭头函数中this的指向</strong><br><br><pre><code class=\"language-JavaScript\">var id = 'Global';<br>let fun1 = () => {<br>    console.log(this.id)<br>};<br>fun1();                     // 'Global'<br>fun1.call({id: 'Obj'});     // 'Global'<br>fun1.apply({id: 'Obj'});    // 'Global'<br>fun1.bind({id: 'Obj'})();   // 'Global'<br></code></pre><br><br><strong>（5）箭头函数不能作为构造函数使用</strong><br><br>构造函数在new的步骤在上面已经说过了，实际上第二步就是将函数中的this指向该对象。 但是由于箭头函数时没有自己的this的，且this指向外层的执行环境，且不能改变指向，所以不能当做构造函数使用。<br><br><strong>（6）箭头函数没有自己的arguments</strong><br><br>箭头函数没有自己的arguments对象。在箭头函数中访问arguments实际上获得的是它外层函数的arguments值。<br><br><strong>（7）箭头函数没有prototype</strong><br><br><strong>（8）箭头函数不能用作Generator函数，不能使用yeild关键字</strong>",
+    "categoryId": "1768000001005",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590266,
+    "title": "箭头函数的**this**指向哪⾥？",
+    "content": "箭头函数不同于传统JavaScript中的函数，箭头函数并没有属于⾃⼰的this，它所谓的this是捕获其所在上下⽂的 this 值，作为⾃⼰的 this 值，并且由于没有属于⾃⼰的this，所以是不会被new调⽤的，这个所谓的this也不会被改变。<br><br>可以⽤Babel理解⼀下箭头函数:<br><br><pre><code class=\"language-JavaScript\">// ES6 <br>const obj = { <br>  getArrow() { <br>    return () => { <br>      console.log(this === obj); <br>    }; <br>  } <br>}<br></code></pre><br><br>转化后：<br><br><pre><code class=\"language-JavaScript\">// ES5，由 Babel 转译<br>var obj = { <br>   getArrow: function getArrow() { <br>     var _this = this; <br>     return function () { <br>        console.log(_this === obj); <br>     }; <br>   } <br>};<br></code></pre>",
+    "categoryId": "1768000001005",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590267,
+    "title": "扩展运算符的作用及使用场景",
+    "content": "<strong>（1）对象扩展运算符</strong><br><br>对象的扩展运算符(...)用于取出参数对象中的所有可遍历属性，拷贝到当前对象之中。<br><br><pre><code class=\"language-JavaScript\">let bar = { a: 1, b: 2 };<br>let baz = { ...bar }; // { a: 1, b: 2 }<br></code></pre><br><br>上述方法实际上等价于:<br><br><pre><code class=\"language-JavaScript\">let bar = { a: 1, b: 2 };<br>let baz = Object.assign({}, bar); // { a: 1, b: 2 }<br></code></pre><br><br><code>Object.assign</code>方法用于对象的合并，将源对象<code>（source）</code>的所有可枚举属性，复制到目标对象<code>（target）</code>。<code>Object.assign</code>方法的第一个参数是目标对象，后面的参数都是源对象。(<strong>如果目标对象与源对象有同名属性，或多个源对象有同名属性，则后面的属性会覆盖前面的属性</strong>)。<br><br>同样，如果用户自定义的属性，放在扩展运算符后面，则扩展运算符内部的同名属性会被覆盖掉。<br><br><pre><code class=\"language-JavaScript\">let bar = {a: 1, b: 2};<br>let baz = {...bar, ...{a:2, b: 4}};  // {a: 2, b: 4}<br></code></pre><br><br>利用上述特性就可以很方便的修改对象的部分属性。在<code>redux</code>中的<code>reducer</code>函数规定必须是<strong>一个纯函数</strong>，<code>reducer</code>中的<code>state</code>对象要求不能直接修改，可以通过扩展运算符把修改路径的对象都复制一遍，然后产生一个新的对象返回。<br><br>需要注意：扩展运算符对<strong>对象实例的拷贝属于浅拷贝</strong>。<br><br><strong>（2）数组扩展运算符</strong><br><br>数组的扩展运算符可以将一个数组转为用逗号分隔的参数序列，且每次只能展开一层数组。<br><br><pre><code class=\"language-JavaScript\">console.log(...[1, 2, 3])<br>// 1 2 3<br>console.log(...[1, [2, 3, 4], 5])<br>// 1 [2, 3, 4] 5<br></code></pre><br><br>下面是数组的扩展运算符的应用：<br><br><li><strong>将数组转换为参数序列</strong></li><br><br><pre><code class=\"language-JavaScript\">function add(x, y) {<br>  return x + y;<br>}<br>const numbers = [1, 2];<br>add(...numbers) // 3<br></code></pre><br><br><li><strong>复制数组</strong></li><br><br><pre><code class=\"language-JavaScript\">const arr1 = [1, 2];<br>const arr2 = [...arr1];<br></code></pre><br><br>要记住：<strong>扩展运算符(…)用于取出参数对象中的所有可遍历属性，拷贝到当前对象之中</strong>，这里参数对象是个数组，数组里面的所有对象都是基础数据类型，将所有基础数据类型重新拷贝到新的数组中。<br><br><li><strong>合并数组</strong></li><br><br>如果想在数组内合并数组，可以这样：<br><br><pre><code class=\"language-JavaScript\">const arr1 = ['two', 'three'];<br>const arr2 = ['one', ...arr1, 'four', 'five'];<br>// [\"one\", \"two\", \"three\", \"four\", \"five\"]<br></code></pre><br><br><li><strong>扩展运算符与解构赋值结合起来，用于生成数组</strong></li><br><br><pre><code class=\"language-JavaScript\">const [first, ...rest] = [1, 2, 3, 4, 5];<br>first // 1<br>rest  // [2, 3, 4, 5]<br></code></pre><br><br>需要注意：<strong>如果将扩展运算符用于数组赋值，只能放在参数的最后一位，否则会报错。</strong><br><br><pre><code class=\"language-JavaScript\">const [...rest, last] = [1, 2, 3, 4, 5];         // 报错<br>const [first, ...rest, last] = [1, 2, 3, 4, 5];  // 报错<br></code></pre><br><br><li><strong>将字符串转为真正的数组</strong></li><br><br><pre><code class=\"language-JavaScript\">[...'hello']    // [ \"h\", \"e\", \"l\", \"l\", \"o\" ]<br></code></pre><br><br><li><strong>任何 Iterator 接口的对象，都可以用扩展运算符转为真正的数组</strong></li><br><br>比较常见的应用是可以将某些数据结构转为数组：<br><br><pre><code class=\"language-JavaScript\">// arguments对象<br>function foo() {<br>  const args = [...arguments];<br>}<br></code></pre><br><br>用于替换<code>es5</code>中的<code>Array.prototype.slice.call(arguments)</code>写法。<br><br><li><strong>使用</strong><code><strong>Math</strong></code><strong>函数获取数组中特定的值</strong></li><br><br><pre><code class=\"language-JavaScript\">const numbers = [9, 4, 7, 1];<br>Math.min(...numbers); // 1<br>Math.max(...numbers); // 9<br></code></pre>",
+    "categoryId": "1768000001005",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590268,
+    "title": "对对象与数组的解构的理解",
+    "content": "解构是 ES6 提供的一种新的提取数据的模式，这种模式能够从对象或数组里有针对性地拿到想要的数值。<br><br><strong>1）数组的解构</strong><br><br>在解构数组时，以元素的位置为匹配条件来提取想要的数据的：<br><br><pre><code class=\"language-JavaScript\">const [a, b, c] = [1, 2, 3]<br></code></pre><br><br>最终，a、b、c分别被赋予了数组第0、1、2个索引位的值：<br><br>![img](https://secure2.wostatic.cn/static/qLe5MFqx2XRQAqtJDWd7oa/image.png?auth_key=1768103476-fu7mWciZ6ob6ERNkeHkas4-0-cb1a38b72770cfc62cc83a4e9bc6af7b)<br><br>数组里的0、1、2索引位的元素值，精准地被映射到了左侧的第0、1、2个变量里去，这就是数组解构的工作模式。还可以通过给左侧变量数组设置空占位的方式，实现对数组中某几个元素的精准提取：<br><br><pre><code class=\"language-JavaScript\">const [a,,c] = [1,2,3]<br></code></pre><br><br>通过把中间位留空，可以顺利地把数组第一位和最后一位的值赋给 a、c 两个变量：<br><br>![img](https://secure2.wostatic.cn/static/vDcrxGKrQhCeTsr3U3q3kX/image.png?auth_key=1768103476-mrgyGc58k7ZTBKXBmCBLoV-0-baf74d9fabbb8a62aad64c748ba7efdf)<br><br><strong>2）对象的解构</strong><br><br>对象解构比数组结构稍微复杂一些，也更显强大。在解构对象时，是以属性的名称为匹配条件，来提取想要的数据的。现在定义一个对象：<br><br><pre><code class=\"language-JavaScript\">const stu = {<br>  name: 'Bob',<br>  age: 24<br>}<br></code></pre><br><br>假如想要解构它的两个自有属性，可以这样：<br><br><pre><code class=\"language-JavaScript\">const { name, age } = stu<br></code></pre><br><br>这样就得到了 name 和 age 两个和 stu 平级的变量：<br><br>![img](https://secure2.wostatic.cn/static/rqYLfzHrRVUskHjg4xDaia/image.png?auth_key=1768103477-4Ex5K66AWgpy4QHNAZh3dX-0-4fddc0504a1a99b25096dc128422d6f5)<br><br>注意，对象解构严格以属性名作为定位依据，所以就算调换了 name 和 age 的位置，结果也是一样的：<br><br><pre><code class=\"language-JavaScript\">const { age, name } = stu<br></code></pre>",
+    "categoryId": "1768000001005",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590269,
+    "title": "*如何提取高度嵌套的对象里的指定属性？**",
+    "content": "有时会遇到一些嵌套程度非常深的对象：<br><br><pre><code class=\"language-JavaScript\">const school = {<br>   classes: {<br>      stu: {<br>         name: 'Bob',<br>         age: 24,<br>      }<br>   }<br>}<br></code></pre><br><br>像此处的 name 这个变量，嵌套了四层，此时如果仍然尝试老方法来提取它：<br><br><pre><code class=\"language-JavaScript\">const { name } = school<br></code></pre><br><br>显然是不奏效的，因为 school 这个对象本身是没有 name 这个属性的，name 位于 school 对象的“儿子的儿子”对象里面。要想把 name 提取出来，一种比较笨的方法是逐层解构：<br><br><pre><code class=\"language-JavaScript\">const { classes } = school<br>const { stu } = classes<br>const { name } = stu<br>name // 'Bob'<br></code></pre><br><br>但是还有一种更标准的做法，可以用一行代码来解决这个问题：<br><br><pre><code class=\"language-JavaScript\">const { classes: { stu: { name } }} = school<br>       <br>console.log(name)  // 'Bob'<br></code></pre><br><br>可以在解构出来的变量名右侧，通过冒号+{目标属性名}这种形式，进一步解构它，一直解构到拿到目标数据为止。",
+    "categoryId": "1768000001005",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590270,
+    "title": "对 rest 参数的理解",
+    "content": "扩展运算符被用在函数形参上时，<strong>它还可以把一个分离的参数序列整合成一个数组</strong>：<br><br><pre><code class=\"language-JavaScript\">function mutiple(...args) {<br>  let result = 1;<br>  for (var val of args) {<br>    result *= val;<br>  }<br>  return result;<br>}<br>mutiple(1, 2, 3, 4) // 24<br></code></pre><br><br>这里，传入 mutiple 的是四个分离的参数，但是如果在 mutiple 函数里尝试输出 args 的值，会发现它是一个数组：<br><br><pre><code class=\"language-JavaScript\">function mutiple(...args) {<br>  console.log(args)<br>}<br>mutiple(1, 2, 3, 4) // [1, 2, 3, 4]<br></code></pre><br><br>这就是 … rest运算符的又一层威力了，它可以把函数的多个入参收敛进一个数组里。这一点<strong>经常用于获取函数的多余参数，或者像上面这样处理函数参数个数不确定的情况。</strong>",
+    "categoryId": "1768000001005",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
+  },
+  {
+    "id": 1768103590271,
+    "title": "ES6中模板语法与字符串处理",
+    "content": "ES6 提出了“模板语法”的概念。在 ES6 以前，拼接字符串是很麻烦的事情：<br><br><pre><code class=\"language-JavaScript\">var name = 'css'   <br>var career = 'coder' <br>var hobby = ['coding', 'writing']<br>var finalString = 'my name is ' + name + ', I work as a ' + career + ', I love ' + hobby[0] + ' and ' + hobby[1]<br></code></pre><br><br>仅仅几个变量，写了这么多加号，还要时刻小心里面的空格和标点符号有没有跟错地方。但是有了模板字符串，拼接难度直线下降：<br><br><pre><code class=\"language-JavaScript\">var name = 'css'   <br>var career = 'coder' <br>var hobby = ['coding', 'writing']<br>var finalString = <code>my name is ${name}, I work as a ${career} I love ${hobby[0]} and ${hobby[1]}</code><br></code></pre><br><br>字符串不仅更容易拼了，也更易读了，代码整体的质量都变高了。这就是模板字符串的第一个优势——允许用${}的方式嵌入变量。但这还不是问题的关键，模板字符串的关键优势有两个：<br><br><li>在模板字符串中，空格、缩进、换行都会被保留</li><br><li>模板字符串完全支持“运算”式的表达式，可以在${}里完成一些计算</li><br><br>基于第一点，可以在模板字符串里无障碍地直接写 html 代码：<br><br><pre><code class=\"language-JavaScript\">let list = <code><br>  <ul><br>    <li>列表项1</li><br>    <li>列表项2</li><br>  </ul><br></code>;<br>console.log(message); // 正确输出，不存在报错<br></code></pre><br><br>基于第二点，可以把一些简单的计算和调用丢进 ${} 来做：<br><br><pre><code class=\"language-JavaScript\">function add(a, b) {<br>  const finalString = <code>${a} + ${b} = ${a+b}</code><br>  console.log(finalString)<br>}<br>add(1, 2) // 输出 '1 + 2 = 3'<br></code></pre><br><br>除了模板语法外， ES6中还新增了一系列的字符串方法用于提升开发效率：<br><br><li><strong>存在性判定</strong>：在过去，当判断一个字符/字符串是否在某字符串中时，只能用 indexOf > -1 来做。现在 ES6 提供了三个方法：includes、startsWith、endsWith，它们都会返回一个布尔值来告诉你是否存在。</li><br><li>- <strong>includes</strong>：判断字符串与子串的包含关系：</li><br><br><pre><code class=\"language-JavaScript\">const son = 'haha' <br>const father = 'xixi haha hehe'<br>father.includes(son) // true<br></code></pre><br><br><li>- <strong>startsWith</strong>：判断字符串是否以某个/某串字符开头：</li><br><br><pre><code class=\"language-JavaScript\">const father = 'xixi haha hehe'<br>father.startsWith('haha') // false<br>father.startsWith('xixi') // true<br></code></pre><br><br><li>- <strong>endsWith</strong>：判断字符串是否以某个/某串字符结尾：</li><br><br><pre><code class=\"language-JavaScript\">const father = 'xixi haha hehe'<br>  father.endsWith('hehe') // true<br></code></pre><br><br><li><strong>自动重复</strong>：可以使用 repeat 方法来使同一个字符串输出多次（被连续复制多次）：</li><br><br><pre><code class=\"language-JavaScript\">const sourceCode = 'repeat for 3 times;'<br>const repeated = sourceCode.repeat(3) <br>console.log(repeated) // repeat for 3 times;repeat for 3 times;repeat for 3 times;<br></code></pre>",
+    "categoryId": "1768000001005",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T03:53:10.251Z",
+    "updatedAt": "2026-01-11T03:53:10.251Z"
   }
 ]
