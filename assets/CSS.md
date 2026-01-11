@@ -1,2058 +1,3284 @@
+ArkTS通过规范约束了TypeScript（简称TS）中过于灵活而影响开发正确性或者给运行时带来不必要额外开销的特性。本文罗列了所有在ArkTS中限制的TS特性，并提供了重构代码的建议。ArkTS保留了TS大部分的语法特性，对于本文中没有约束的TS特性，则说明ArkTS完全支持它们。例如：ArkTS支持自定义装饰器，语法上和TS一致。按照本文提供的约束进行代码重构后的代码仍为合法有效的TS代码。
 
+**示例**
 
-### 1. 代码输出结果
+包含关键字`var`的原始TypeScript代码：
 
-```javascript
-const promise = new Promise((resolve, reject) => {
-  console.log(1);
-  console.log(2);
-});
-promise.then(() => {
-  console.log(3);
-});
-console.log(4);
+```typescript
+function addTen(x: number): number {
+  var ten = 10;
+  return x + ten;
+}
 ```
 
-输出结果如下：
+重构后的代码：
 
-```javascript
-1 
-2 
-4
+```typescript
+function addTen(x: number): number {
+  let ten = 10;
+  return x + ten;
+}
 ```
 
-promise.then 是微任务，它会在所有的宏任务执行完之后才会执行，同时需要promise内部的状态发生变化，因为这里内部没有发生变化，一直处于pending状态，所以不输出3。
+**级别**
 
-### 2. 代码输出结果
+约束分为两个级别：错误、警告。
 
-```javascript
-const promise1 = new Promise((resolve, reject) => {
-  console.log('promise1')
-  resolve('resolve1')
-})
-const promise2 = promise1.then(res => {
-  console.log(res)
-})
-console.log('1', promise1);
-console.log('2', promise2);
-```
+- **错误**: 必须要遵从的约束。如果不遵从该约束，将会导致程序编译失败。
+- **警告**: 推荐遵从的约束。尽管现在违反该约束不会影响编译流程，但是在将来，违反该约束可能将会导致程序编译失败。
 
-输出结果如下：
+**不支持的特性**
 
-```javascript
-promise1
-1 Promise{<resolved>: resolve1}
-2 Promise{<pending>}
-resolve1
-```
+目前，不支持的特性主要包括：
 
-需要注意的是，直接打印promise1，会打印出它的状态值和参数。
+- 与降低运行时性能的动态类型相关的特性。
+- 需要编译器额外支持从而导致项目构建时间增加的特性。
 
-代码执行过程如下：
+根据开发者的反馈以及更多实际场景的数据，我们将来可能进一步**缩小**不支持特性的范围。
 
-1. script是一个宏任务，按照顺序执行这些代码；
-2. 首先进入Promise，执行该构造函数中的代码，打印`promise1`；
-3. 碰到`resolve`函数, 将`promise1`的状态改变为`resolved`, 并将结果保存下来；
-4. 碰到`promise1.then`这个微任务，将它放入微任务队列；
-5. `promise2`是一个新的状态为`pending`的`Promise`；
-6. 执行同步代码1， 同时打印出`promise1`的状态是`resolved`；
-7. 执行同步代码2，同时打印出`promise2`的状态是`pending`；
-8. 宏任务执行完毕，查找微任务队列，发现`promise1.then`这个微任务且状态为`resolved`，执行它。
+## 概述
 
-### 3. 代码输出结果
+本节罗列了ArkTS不支持或部分支持的TypeScript特性。完整的列表以及详细的代码示例和重构建议，请参考[约束说明](#约束说明)。更多案例请参考[适配指导案例](arkts-more-cases.md)。
 
-```javascript
-const promise = new Promise((resolve, reject) => {
-  console.log(1);
-  setTimeout(() => {
-    console.log("timerStart");
-    resolve("success");
-    console.log("timerEnd");
-  }, 0);
-  console.log(2);
-});
-promise.then((res) => {
-  console.log(res);
-});
-console.log(4);
-```
+### 强制使用静态类型
 
-输出结果如下：
+静态类型是ArkTS最重要的特性之一。如果程序采用静态类型，即所有类型在编译时都是已知的，那么开发者就能够容易理解代码中使用了哪些数据结构。同时，由于所有类型在程序实际运行前都是已知的，编译器可以提前验证代码的正确性，从而可以减少运行时的类型检查，有助于提升性能。
 
-```javascript
-1
-2
-4
-timerStart
-timerEnd
-success
-```
+基于上述考虑，ArkTS中禁止使用`any`类型。
 
-代码执行过程如下：
+**示例**
 
-- 首先遇到Promise构造函数，会先执行里面的内容，打印`1`；
-- 遇到定时器`steTimeout`，它是一个宏任务，放入宏任务队列；
-- 继续向下执行，打印出2；
-- 由于`Promise`的状态此时还是`pending`，所以`promise.then`先不执行；
-- 继续执行下面的同步任务，打印出4；
-- 此时微任务队列没有任务，继续执行下一轮宏任务，执行`steTimeout`；
-- 首先执行`timerStart`，然后遇到了`resolve`，将`promise`的状态改为`resolved`且保存结果并将之前的`promise.then`推入微任务队列，再执行`timerEnd`；
-- 执行完这个宏任务，就去执行微任务`promise.then`，打印出`resolve`的结果。
-
-### 4. 代码输出结果
-
-```javascript
-Promise.resolve().then(() => {
-  console.log('promise1');
-  const timer2 = setTimeout(() => {
-    console.log('timer2')
-  }, 0)
-});
-const timer1 = setTimeout(() => {
-  console.log('timer1')
-  Promise.resolve().then(() => {
-    console.log('promise2')
-  })
-}, 0)
-console.log('start');
-```
-
-输出结果如下：
-
-```javascript
-start
-promise1
-timer1
-promise2
-timer2
-```
-
-代码执行过程如下：
-
-1. 首先，`Promise.resolve().then`是一个微任务，加入微任务队列
-2. 执行timer1，它是一个宏任务，加入宏任务队列
-3. 继续执行下面的同步代码，打印出`start`
-4. 这样第一轮宏任务就执行完了，开始执行微任务`Promise.resolve().then`，打印出`promise1`
-5. 遇到`timer2`，它是一个宏任务，将其加入宏任务队列，此时宏任务队列有两个任务，分别是`timer1`、`timer2`；
-6. 这样第一轮微任务就执行完了，开始执行第二轮宏任务，首先执行定时器`timer1`，打印`timer1`；
-7. 遇到`Promise.resolve().then`，它是一个微任务，加入微任务队列
-8. 开始执行微任务队列中的任务，打印`promise2`；
-9. 最后执行宏任务`timer2`定时器，打印出`timer2`；
-
-### 5. 代码输出结果
-
-```javascript
-const promise = new Promise((resolve, reject) => {
-    resolve('success1');
-    reject('error');
-    resolve('success2');
-});
-promise.then((res) => {
-    console.log('then:', res);
-}).catch((err) => {
-    console.log('catch:', err);
-})
-```
-
-输出结果如下：
-
-```javascript
-then：success1
-```
-
-这个题目考察的就是**Promise的状态在发生变化之后，就不会再发生变化**。开始状态由`pending`变为`resolve`，说明已经变为已完成状态，下面的两个状态的就不会再执行，同时下面的catch也不会捕获到错误。
-
-### 6. 代码输出结果
-
-```javascript
-Promise.resolve(1)
-  .then(2)
-  .then(Promise.resolve(3))
-  .then(console.log)
-```
-
-输出结果如下：
-
-```javascript
-1
-Promise {<fulfilled>: undefined}
-```
-
-Promise.resolve方法的参数如果是一个原始值，或者是一个不具有then方法的对象，则Promise.resolve方法返回一个新的Promise对象，状态为resolved，Promise.resolve方法的参数，会同时传给回调函数。
-
-then方法接受的参数是函数，而如果传递的并非是一个函数，它实际上会将其解释为then(null)，这就会导致前一个Promise的结果会传递下面。
-
-### 7. 代码输出结果
-
-```javascript
-const promise1 = new Promise((resolve, reject) => {
-  setTimeout(() => {
-    resolve('success')
-  }, 1000)
-})
-const promise2 = promise1.then(() => {
-  throw new Error('error!!!')
-})
-console.log('promise1', promise1)
-console.log('promise2', promise2)
-setTimeout(() => {
-  console.log('promise1', promise1)
-  console.log('promise2', promise2)
-}, 2000)
-```
-
-输出结果如下：
-
-```javascript
-promise1 Promise {<pending>}
-promise2 Promise {<pending>}
-
-Uncaught (in promise) Error: error!!!
-promise1 Promise {<fulfilled>: "success"}
-promise2 Promise {<rejected>: Error: error!!}
-```
-
-### 8. 代码输出结果
-
-```javascript
-Promise.resolve(1)
-  .then(res => {
-    console.log(res);
-    return 2;
-  })
-  .catch(err => {
-    return 3;
-  })
-  .then(res => {
-    console.log(res);
-  });
-```
-
-输出结果如下：
-
-```javascript
-1   
-2
-```
-
-Promise是可以链式调用的，由于每次调用 `.then` 或者 `.catch` 都会返回一个新的 promise，从而实现了链式调用, 它并不像一般任务的链式调用一样return this。
-
-上面的输出结果之所以依次打印出1和2，是因为`resolve(1)`之后走的是第一个then方法，并没有进catch里，所以第二个then中的res得到的实际上是第一个then的返回值。并且return 2会被包装成`resolve(2)`，被最后的then打印输出2。
-
-### 9. 代码输出结果
-
-```javascript
-Promise.resolve().then(() => {
-  return new Error('error!!!')
-}).then(res => {
-  console.log("then: ", res)
-}).catch(err => {
-  console.log("catch: ", err)
-})
-```
-
-输出结果如下：
-
-```javascript
-"then: " "Error: error!!!"
-```
-
-返回任意一个非 promise 的值都会被包裹成 promise 对象，因此这里的`return new Error('error!!!')`也被包裹成了`return Promise.resolve(new Error('error!!!'))`，因此它会被then捕获而不是catch。
-
-### 10. 代码输出结果
-
-```javascript
-const promise = Promise.resolve().then(() => {
-  return promise;
-})
-promise.catch(console.err)
-```
-
-输出结果如下：
-
-```javascript
-Uncaught (in promise) TypeError: Chaining cycle detected for promise #<Promise>
-```
-
-这里其实是一个坑，`.then` 或 `.catch` 返回的值不能是 promise 本身，否则会造成死循环。
-
-### 11. 代码输出结果
-
-```javascript
-Promise.resolve(1)
-  .then(2)
-  .then(Promise.resolve(3))
-  .then(console.log)
-```
-
-输出结果如下：
-
-```javascript
-1
-```
-
-看到这个题目，好多的then，实际上只需要记住一个原则：`.then` 或`.catch` 的参数期望是函数，传入非函数则会发生**值透传**。
-
-第一个then和第二个then中传入的都不是函数，一个是数字，一个是对象，因此发生了透传，将`resolve(1)` 的值直接传到最后一个then里，直接打印出1。
-
-### 12. 代码输出结果
-
-```javascript
-Promise.reject('err!!!')
-  .then((res) => {
-    console.log('success', res)
-  }, (err) => {
-    console.log('error', err)
-  }).catch(err => {
-    console.log('catch', err)
-  })
-```
-
-输出结果如下：
-
-```javascript
-error err!!!
-```
-
-我们知道，`.then`函数中的两个参数：
-
-- 第一个参数是用来处理Promise成功的函数
-- 第二个则是处理失败的函数
-
-也就是说`Promise.resolve('1')`的值会进入成功的函数，`Promise.reject('2')`的值会进入失败的函数。
-
-在这道题中，错误直接被`then`的第二个参数捕获了，所以就不会被`catch`捕获了，输出结果为：`error err!!!'`
-
-但是，如果是像下面这样：
-
-```javascript
-Promise.resolve()
-  .then(function success (res) {
-    throw new Error('error!!!')
-  }, function fail1 (err) {
-    console.log('fail1', err)
-  }).catch(function fail2 (err) {
-    console.log('fail2', err)
-  })
-```
-
-在`then`的第一参数中抛出了错误，那么他就不会被第二个参数不活了，而是被后面的`catch`捕获到。
-
-### 13. 代码输出结果
-
-```javascript
-Promise.resolve('1')
-  .then(res => {
-    console.log(res)
-  })
-  .finally(() => {
-    console.log('finally')
-  })
-Promise.resolve('2')
-  .finally(() => {
-    console.log('finally2')
-    return '我是finally2返回的值'
-  })
-  .then(res => {
-    console.log('finally2后面的then函数', res)
-  })
-```
-
-输出结果如下：
-
-```javascript
-1
-finally2
-finally
-finally2后面的then函数 2
-```
-
-`.finally()`一般用的很少，只要记住以下几点就可以了：
-
-- `.finally()`方法不管Promise对象最后的状态如何都会执行
-- `.finally()`方法的回调函数不接受任何的参数，也就是说你在`.finally()`函数中是无法知道Promise最终的状态是`resolved`还是`rejected`的
-- 它最终返回的默认会是一个上一次的Promise对象值，不过如果抛出的是一个异常则返回异常的Promise对象。
-- finally本质上是then方法的特例
-
-`.finally()`的错误捕获：
-
-```javascript
-Promise.resolve('1')
-  .finally(() => {
-    console.log('finally1')
-    throw new Error('我是finally中抛出的异常')
-  })
-  .then(res => {
-    console.log('finally后面的then函数', res)
-  })
-  .catch(err => {
-    console.log('捕获错误', err)
-  })
-```
-
-输出结果为：
-
-```javascript
-'finally1'
-'捕获错误' Error: 我是finally中抛出的异常
-```
-
-### 14. 代码输出结果
-
-```javascript
-function runAsync (x) {
-    const p = new Promise(r => setTimeout(() => r(x, console.log(x)), 1000))
-    return p
+```typescript
+// 不支持：
+let res: any = some_api_function('hello', 'world');
+// `res`是什么？错误代码的数字？字符串？对象？
+// 该如何处理它？
+// 支持：
+class CallResult {
+  public succeeded(): boolean { ... }
+  public errorMessage(): string { ... }
 }
 
-Promise.all([runAsync(1), runAsync(2), runAsync(3)]).then(res => console.log(res))
-```
-
-输出结果如下：
-
-```javascript
-1
-2
-3
-[1, 2, 3]
-```
-
-首先，定义了一个Promise，来异步执行函数runAsync，该函数传入一个值x，然后间隔一秒后打印出这个x。
-
-之后再使用`Promise.all`来执行这个函数，执行的时候，看到一秒之后输出了1，2，3，同时输出了数组[1, 2, 3]，三个函数是同步执行的，并且在一个回调函数中返回了所有的结果。并且结果和函数的执行顺序是一致的。
-
-### 15. 代码输出结果
-
-```javascript
-function runAsync (x) {
-  const p = new Promise(r => setTimeout(() => r(x, console.log(x)), 1000))
-  return p
+let res: CallResult = some_api_function('hello', 'world');
+if (!res.succeeded()) {
+  console.log('Call failed: ' + res.errorMessage());
 }
-function runReject (x) {
-  const p = new Promise((res, rej) => setTimeout(() => rej(`Error: ${x}`, console.log(x)), 1000 * x))
-  return p
+```
+
+`any`类型在TypeScript中并不常见，只有大约1%的TypeScript代码库使用。一些代码检查工具（例如ESLint）也制定一系列规则来禁止使用`any`。因此，虽然禁止`any`将导致代码重构，但重构量很小，有助于整体性能提升。
+
+### 禁止在运行时变更对象布局
+
+为实现最佳性能，ArkTS要求在程序执行期间不能更改对象的布局。换句话说，ArkTS禁止以下行为：
+
+- 向对象中添加新的属性或方法。
+- 从对象中删除已有的属性或方法。
+- 将任意类型的值赋值给对象属性。
+
+TypeScript编译器已经禁止了许多此类操作。然而，有些操作还是有可能绕过编译器的，例如，使用`as any`转换对象的类型，或者在编译TS代码时关闭严格类型检查的配置，或者在代码中通过`@ts-ignore`忽略类型检查。
+
+在ArkTS中，严格类型检查不是可配置项。ArkTS强制进行部分严格类型检查，并通过规范禁止使用`any`类型，禁止在代码中使用`@ts-ignore`。
+
+**示例**
+
+```typescript
+class Point {
+  public x: number = 0
+  public y: number = 0
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
 }
-Promise.all([runAsync(1), runReject(4), runAsync(3), runReject(2)])
-       .then(res => console.log(res))
-       .catch(err => console.log(err))
-```
 
-输出结果如下：
+// 无法从对象中删除某个属性，从而确保所有Point对象都具有属性x
+let p1 = new Point(1.0, 1.0);
+delete p1.x;           // 在TypeScript和ArkTS中，都会产生编译时错误
+delete (p1 as any).x;  // 在TypeScript中不会报错；在ArkTS中会产生编译时错误
 
-```javascript
-// 1s后输出
-1
-3
-// 2s后输出
-2
-Error: 2
-// 4s后输出
-4
-```
+// Point类没有定义命名为z的属性，在程序运行时也无法添加该属性
+let p2 = new Point(2.0, 2.0);
+p2.z = 'Label';           // 在TypeScript和ArkTS中，都会产生编译时错误
+(p2 as any).z = 'Label';   // 在TypeScript中不会报错；在ArkTS中会产生编译时错误
 
-可以看到。catch捕获到了第一个错误，在这道题目中最先的错误就是`runReject(2)`的结果。如果一组异步操作中有一个异常都不会进入`.then()`的第一个回调函数参数中。会被`.then()`的第二个回调函数捕获。
+// 类的定义确保了所有Point对象只有属性x和y，并且无法被添加其他属性
+let p3 = new Point(3.0, 3.0);
+let prop = Symbol();      // 在TypeScript中不会报错；在ArkTS中会产生编译时错误
+(p3 as any)[prop] = p3.x; // 在TypeScript中不会报错；在ArkTS中会产生编译时错误
+p3[prop] = p3.x;          // 在TypeScript和ArkTS中，都会产生编译时错误
 
-### 16. 代码输出结果
+// 类的定义确保了所有Point对象的属性x和y都具有number类型，因此，无法将其他类型的值赋值给它们
+let p4 = new Point(4.0, 4.0);
+p4.x = 'Hello!';          // 在TypeScript和ArkTS中，都会产生编译时错误
+(p4 as any).x = 'Hello!'; // 在TypeScript中不会报错；在ArkTS中会产生编译时错误
 
-```javascript
-function runAsync (x) {
-  const p = new Promise(r => setTimeout(() => r(x, console.log(x)), 1000))
-  return p
-}
-Promise.race([runAsync(1), runAsync(2), runAsync(3)])
-  .then(res => console.log('result: ', res))
-  .catch(err => console.log(err))
-```
-
-输出结果如下：
-
-```javascript
-1
-'result: ' 1
-2
-3
-```
-
-then只会捕获第一个成功的方法，其他的函数虽然还会继续执行，但是不是被then捕获了。
-
-### 17. 代码输出结果
-
-```javascript
-function runAsync(x) {
-  const p = new Promise(r =>
-    setTimeout(() => r(x, console.log(x)), 1000)
+// 使用符合类定义的Point对象：
+function distance(p1: Point, p2: Point): number {
+  return Math.sqrt(
+    (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y)
   );
-  return p;
 }
-function runReject(x) {
-  const p = new Promise((res, rej) =>
-    setTimeout(() => rej(`Error: ${x}`, console.log(x)), 1000 * x)
-  );
-  return p;
-}
-Promise.race([runReject(0), runAsync(1), runAsync(2), runAsync(3)])
-  .then(res => console.log("result: ", res))
-  .catch(err => console.log(err));
+let p5 = new Point(5.0, 5.0);
+let p6 = new Point(6.0, 6.0);
+console.log('Distance between p5 and p6: ' + distance(p5, p6));
 ```
 
-输出结果如下：
+修改对象布局会影响代码的可读性以及运行时性能。从开发者的角度来说，在某处定义类，然后又在其他地方修改实际的对象布局，很容易引起困惑乃至引入错误。此外，这点还需要额外的运行时支持，增加了执行开销。这一点与静态类型的约束也冲突：既然已决定使用显式类型，为什么还需要添加或删除属性呢？
 
-```javascript
-0
-Error: 0
-1
-2
-3
+当前，只有少数项目允许在运行时变更对象布局，一些常用的代码检查工具也增加了相应的限制规则。这个约束只会导致少量代码重构，但会提升性能。
+
+### 限制运算符的语义
+
+为获得更好的性能并鼓励开发者编写更清晰的代码，ArkTS限制了一些运算符的语义。详细的语义限制，请参考[约束说明](#约束说明)。
+
+**示例**
+
+```typescript
+// 一元运算符`+`只能作用于数值类型：
+let t = +42;   // 合法运算
+let s = +'42'; // 编译时错误
 ```
 
-可以看到在catch捕获到第一个错误之后，后面的代码还不执行，不过不会再被捕获了。
+使用额外的语义重载语言运算符会增加语言规范的复杂度，而且，开发者还被迫牢记所有可能的例外情况及对应的处理规则。在某些情况下，产生一些不必要的运行时开销。
 
-注意：`all`和`race`传入的数组中如果有会抛出异常的异步任务，那么只有最先抛出的错误会被捕获，并且是被then的第二个参数或者后面的catch捕获；但并不会影响数组中其它的异步任务的执行。
+当前只有不到1%的代码库使用该特性。因此，尽管限制运算符的语义需要重构代码，但重构量很小且非常容易操作，并且，通过重构能使代码更清晰、具备更高性能。
 
-### 18. 代码输出结果
+### 不支持 structural typing
 
-```javascript
-async function async1() {
-  console.log("async1 start");
-  await async2();
-  console.log("async1 end");
-}
-async function async2() {
-  console.log("async2");
-}
-async1();
-console.log('start')
-```
+假设两个不相关的类`T`和`U`拥有相同的`public`API：
 
-输出结果如下：
+```typescript
+class T {
+  public name: string = ''
 
-```javascript
-async1 start
-async2
-start
-async1 end
-```
-
-代码的执行过程如下：
-
-1. 首先执行函数中的同步代码`async1 start`，之后遇到了`await`，它会阻塞`async1`后面代码的执行，因此会先去执行`async2`中的同步代码`async2`，然后跳出`async1`；
-2. 跳出`async1`函数后，执行同步代码`start`；
-3. 在一轮宏任务全部执行完之后，再来执行`await`后面的内容`async1 end`。
-
-这里可以理解为await后面的语句相当于放到了new Promise中，下一行及之后的语句相当于放在Promise.then中。
-
-### 19. 代码输出结果
-
-```javascript
-async function async1() {
-  console.log("async1 start");
-  await async2();
-  console.log("async1 end");
-  setTimeout(() => {
-    console.log('timer1')
-  }, 0)
-}
-async function async2() {
-  setTimeout(() => {
-    console.log('timer2')
-  }, 0)
-  console.log("async2");
-}
-async1();
-setTimeout(() => {
-  console.log('timer3')
-}, 0)
-console.log("start")
-```
-
-输出结果如下：
-
-```javascript
-async1 start
-async2
-start
-async1 end
-timer2
-timer3
-timer1
-```
-
-代码的执行过程如下：
-
-1. 首先进入`async1`，打印出`async1 start`；
-2. 之后遇到`async2`，进入`async2`，遇到定时器`timer2`，加入宏任务队列，之后打印`async2`；
-3. 由于`async2`阻塞了后面代码的执行，所以执行后面的定时器`timer3`，将其加入宏任务队列，之后打印`start`；
-4. 然后执行async2后面的代码，打印出`async1 end`，遇到定时器timer1，将其加入宏任务队列；
-5. 最后，宏任务队列有三个任务，先后顺序为`timer2`，`timer3`，`timer1`，没有微任务，所以直接所有的宏任务按照先进先出的原则执行。
-
-### 20. 代码输出结果
-
-```javascript
-async function async1 () {
-  console.log('async1 start');
-  await new Promise(resolve => {
-    console.log('promise1')
-  })
-  console.log('async1 success');
-  return 'async1 end'
-}
-console.log('srcipt start')
-async1().then(res => console.log(res))
-console.log('srcipt end')
-```
-
-输出结果如下：
-
-```javascript
-script start
-async1 start
-promise1
-script end
-```
-
-这里需要注意的是在`async1`中`await`后面的Promise是没有返回值的，也就是它的状态始终是`pending`状态，所以在`await`之后的内容是不会执行的，包括`async1`后面的 `.then`。
-
-### 21. 代码输出结果
-
-```javascript
-async function async1 () {
-  console.log('async1 start');
-  await new Promise(resolve => {
-    console.log('promise1')
-    resolve('promise1 resolve')
-  }).then(res => console.log(res))
-  console.log('async1 success');
-  return 'async1 end'
-}
-console.log('srcipt start')
-async1().then(res => console.log(res))
-console.log('srcipt end')
-```
-
-这里是对上面一题进行了改造，加上了resolve。
-
-输出结果如下：
-
-```javascript
-script start
-async1 start
-promise1
-script end
-promise1 resolve
-async1 success
-async1 end
-```
-
-### 22. 代码输出结果
-
-```javascript
-async function async1() {
-  console.log("async1 start");
-  await async2();
-  console.log("async1 end");
-}
-
-async function async2() {
-  console.log("async2");
-}
-
-console.log("script start");
-
-setTimeout(function() {
-  console.log("setTimeout");
-}, 0);
-
-async1();
-
-new Promise(resolve => {
-  console.log("promise1");
-  resolve();
-}).then(function() {
-  console.log("promise2");
-});
-console.log('script end')
-```
-
-输出结果如下：
-
-```javascript
-script start
-async1 start
-async2
-promise1
-script end
-async1 end
-promise2
-setTimeout
-```
-
-代码执行过程如下：
-
-1. 开头定义了async1和async2两个函数，但是并未执行，执行script中的代码，所以打印出script start；
-2. 遇到定时器Settimeout，它是一个宏任务，将其加入到宏任务队列；
-3. 之后执行函数async1，首先打印出async1 start；
-4. 遇到await，执行async2，打印出async2，并阻断后面代码的执行，将后面的代码加入到微任务队列；
-5. 然后跳出async1和async2，遇到Promise，打印出promise1；
-6. 遇到resolve，将其加入到微任务队列，然后执行后面的script代码，打印出script end；
-7. 之后就该执行微任务队列了，首先打印出async1 end，然后打印出promise2；
-8. 执行完微任务队列，就开始执行宏任务队列中的定时器，打印出setTimeout。
-
-### 23. 代码输出结果
-
-```javascript
-async function async1 () {
-  await async2();
-  console.log('async1');
-  return 'async1 success'
-}
-async function async2 () {
-  return new Promise((resolve, reject) => {
-    console.log('async2')
-    reject('error')
-  })
-}
-async1().then(res => console.log(res))
-```
-
-输出结果如下：
-
-```javascript
-async2
-Uncaught (in promise) error
-```
-
-可以看到，如果async函数中抛出了错误，就会终止错误结果，不会继续向下执行。
-
-如果想要让错误不足之处后面的代码执行，可以使用catch来捕获：
-
-```javascript
-async function async1 () {
-  await Promise.reject('error!!!').catch(e => console.log(e))
-  console.log('async1');
-  return Promise.resolve('async1 success')
-}
-async1().then(res => console.log(res))
-console.log('script start')
-```
-
-这样的输出结果就是：
-
-```javascript
-script start
-error!!!
-async1
-async1 success
-```
-
-### 24. 代码输出结果
-
-```javascript
-const first = () => (new Promise((resolve, reject) => {
-    console.log(3);
-    let p = new Promise((resolve, reject) => {
-        console.log(7);
-        setTimeout(() => {
-            console.log(5);
-            resolve(6);
-            console.log(p)
-        }, 0)
-        resolve(1);
-    });
-    resolve(2);
-    p.then((arg) => {
-        console.log(arg);
-    });
-}));
-first().then((arg) => {
-    console.log(arg);
-});
-console.log(4);
-```
-
-输出结果如下：
-
-```javascript
-3
-7
-4
-1
-2
-5
-Promise{<resolved>: 1}
-```
-
-代码的执行过程如下：
-
-1. 首先会进入Promise，打印出3，之后进入下面的Promise，打印出7；
-2. 遇到了定时器，将其加入宏任务队列；
-3. 执行Promise  p中的resolve，状态变为resolved，返回值为1；
-4. 执行Promise first中的resolve，状态变为resolved，返回值为2；
-5. 遇到p.then，将其加入微任务队列，遇到first().then，将其加入任务队列；
-6. 执行外面的代码，打印出4；
-7. 这样第一轮宏任务就执行完了，开始执行微任务队列中的任务，先后打印出1和2；
-8. 这样微任务就执行完了，开始执行下一轮宏任务，宏任务队列中有一个定时器，执行它，打印出5，由于执行已经变为resolved状态，所以`resolve(6)`不会再执行；
-9. 最后`console.log(p)`打印出`Promise{<resolved>: 1}`；
-
-### 25. 代码输出结果
-
-```javascript
-const async1 = async () => {
-  console.log('async1');
-  setTimeout(() => {
-    console.log('timer1')
-  }, 2000)
-  await new Promise(resolve => {
-    console.log('promise1')
-  })
-  console.log('async1 end')
-  return 'async1 success'
-} 
-console.log('script start');
-async1().then(res => console.log(res));
-console.log('script end');
-Promise.resolve(1)
-  .then(2)
-  .then(Promise.resolve(3))
-  .catch(4)
-  .then(res => console.log(res))
-setTimeout(() => {
-  console.log('timer2')
-}, 1000)
-```
-
-输出结果如下：
-
-```javascript
-script start
-async1
-promise1
-script end
-1
-timer2
-timer1
-```
-
-代码的执行过程如下：
-
-1. 首先执行同步带吗，打印出script start；
-2. 遇到定时器timer1将其加入宏任务队列；
-3. 之后是执行Promise，打印出promise1，由于Promise没有返回值，所以后面的代码不会执行；
-4. 然后执行同步代码，打印出script end；
-5. 继续执行下面的Promise，.then和.catch期望参数是一个函数，这里传入的是一个数字，因此就会发生值渗透，将resolve(1)的值传到最后一个then，直接打印出1；
-6. 遇到第二个定时器，将其加入到微任务队列，执行微任务队列，按顺序依次执行两个定时器，但是由于定时器时间的原因，会在两秒后先打印出timer2，在四秒后打印出timer1。
-
-### 26. 代码输出结果
-
-```javascript
-const p1 = new Promise((resolve) => {
-  setTimeout(() => {
-    resolve('resolve3');
-    console.log('timer1')
-  }, 0)
-  resolve('resovle1');
-  resolve('resolve2');
-}).then(res => {
-  console.log(res)  // resolve1
-  setTimeout(() => {
-    console.log(p1)
-  }, 1000)
-}).finally(res => {
-  console.log('finally', res)
-})
-```
-
-执行结果为如下：
-
-```javascript
-resolve1
-finally  undefined
-timer1
-Promise{<resolved>: undefined}
-```
-
-需要注意的是最后一个定时器打印出的p1其实是`.finally`的返回值，我们知道`.finally`的返回值如果在没有抛出错误的情况下默认会是上一个Promise的返回值，而这道题中`.finally`上一个Promise是`.then()`，但是这个`.then()`并没有返回值，所以p1打印出来的Promise的值会是`undefined`，如果在定时器的下面加上一个`return 1`，则值就会变成1。
-
-### 27. 代码输出结果
-
-```javascript
-console.log('1');
-
-setTimeout(function() {
-    console.log('2');
-    process.nextTick(function() {
-        console.log('3');
-    })
-    new Promise(function(resolve) {
-        console.log('4');
-        resolve();
-    }).then(function() {
-        console.log('5')
-    })
-})
-process.nextTick(function() {
-    console.log('6');
-})
-new Promise(function(resolve) {
-    console.log('7');
-    resolve();
-}).then(function() {
-    console.log('8')
-})
-
-setTimeout(function() {
-    console.log('9');
-    process.nextTick(function() {
-        console.log('10');
-    })
-    new Promise(function(resolve) {
-        console.log('11');
-        resolve();
-    }).then(function() {
-        console.log('12')
-    })
-})
-```
-
-输出结果如下：
-
-```javascript
-1
-7
-6
-8
-2
-4
-3
-5
-9
-11
-10
-12
-```
-
-**（1）第一轮事件循环流程分析如下：**
-
-- 整体script作为第一个宏任务进入主线程，遇到`console.log`，输出1。
-- 遇到`setTimeout`，其回调函数被分发到宏任务Event Queue中。暂且记为`setTimeout1`。
-- 遇到`process.nextTick()`，其回调函数被分发到微任务Event Queue中。记为`process1`。
-- 遇到`Promise`，`new Promise`直接执行，输出7。`then`被分发到微任务Event Queue中。记为`then1`。
-- 又遇到了`setTimeout`，其回调函数被分发到宏任务Event Queue中，记为`setTimeout2`。
-
-| 宏任务Event Queue | 微任务Event Queue |
-| ----------------- | ----------------- |
-| setTimeout1       | process1          |
-| setTimeout2       | then1             |
-
-
-上表是第一轮事件循环宏任务结束时各Event Queue的情况，此时已经输出了1和7。发现了`process1`和`then1`两个微任务：
-
-- 执行`process1`，输出6。
-- 执行`then1`，输出8。
-
-第一轮事件循环正式结束，这一轮的结果是输出1，7，6，8。
-
-**（2）第二轮时间循环从**`**setTimeout1**`**宏任务开始：**
-
-- 首先输出2。接下来遇到了`process.nextTick()`，同样将其分发到微任务Event Queue中，记为`process2`。
-- `new Promise`立即执行输出4，`then`也分发到微任务Event Queue中，记为`then2`。
-
-| 宏任务Event Queue | 微任务Event Queue |
-| ----------------- | ----------------- |
-| setTimeout2       | process2          |
-|                   | then2             |
-
-
-第二轮事件循环宏任务结束，发现有`process2`和`then2`两个微任务可以执行：
-
-- 输出3。
-- 输出5。
-
-第二轮事件循环结束，第二轮输出2，4，3，5。
-
-**（3）第三轮事件循环开始，此时只剩setTimeout2了，执行。**
-
-- 直接输出9。
-- 将`process.nextTick()`分发到微任务Event Queue中。记为`process3`。
-- 直接执行`new Promise`，输出11。
-- 将`then`分发到微任务Event Queue中，记为`then3`。
-
-| 宏任务Event Queue | 微任务Event Queue |
-| ----------------- | ----------------- |
-|                   | process3          |
-|                   | then3             |
-
-
-第三轮事件循环宏任务执行结束，执行两个微任务`process3`和`then3`：
-
-- 输出10。
-- 输出12。
-
-第三轮事件循环结束，第三轮输出9，11，10，12。
-
-整段代码，共进行了三次事件循环，完整的输出为1，7，6，8，2，4，3，5，9，11，10，12。
-
-### 28. 代码输出结果
-
-```javascript
-console.log(1)
-
-setTimeout(() => {
-  console.log(2)
-})
-
-new Promise(resolve =>  {
-  console.log(3)
-  resolve(4)
-}).then(d => console.log(d))
-
-setTimeout(() => {
-  console.log(5)
-  new Promise(resolve =>  {
-    resolve(6)
-  }).then(d => console.log(d))
-})
-
-setTimeout(() => {
-  console.log(7)
-})
-
-console.log(8)
-```
-
-输出结果如下：
-
-```javascript
-1
-3
-8
-4
-2
-5
-6
-7
-```
-
-代码执行过程如下：
-
-1. 首先执行script代码，打印出1；
-2. 遇到第一个定时器，加入到宏任务队列；
-3. 遇到Promise，执行代码，打印出3，遇到resolve，将其加入到微任务队列；
-4. 遇到第二个定时器，加入到宏任务队列；
-5. 遇到第三个定时器，加入到宏任务队列；
-6. 继续执行script代码，打印出8，第一轮执行结束；
-7. 执行微任务队列，打印出第一个Promise的resolve结果：4；
-8. 开始执行宏任务队列，执行第一个定时器，打印出2；
-9. 此时没有微任务，继续执行宏任务中的第二个定时器，首先打印出5，遇到Promise，首选打印出6，遇到resolve，将其加入到微任务队列；
-10. 执行微任务队列，打印出6；
-11. 执行宏任务队列中的最后一个定时器，打印出7。
-
-### 29. 代码输出结果
-
-```javascript
-console.log(1);
-    
-setTimeout(() => {
-  console.log(2);
-  Promise.resolve().then(() => {
-    console.log(3)
-  });
-});
-
-new Promise((resolve, reject) => {
-  console.log(4)
-  resolve(5)
-}).then((data) => {
-  console.log(data);
-})
-
-setTimeout(() => {
-  console.log(6);
-})
-
-console.log(7);
-```
-
-代码输出结果如下：
-
-```javascript
-1
-4
-7
-5
-2
-3
-6
-```
-
-代码执行过程如下：
-
-1. 首先执行scrip代码，打印出1；
-2. 遇到第一个定时器setTimeout，将其加入到宏任务队列；
-3. 遇到Promise，执行里面的同步代码，打印出4，遇到resolve，将其加入到微任务队列；
-4. 遇到第二个定时器setTimeout，将其加入到红任务队列；
-5. 执行script代码，打印出7，至此第一轮执行完成；
-6. 指定微任务队列中的代码，打印出resolve的结果：5；
-7. 执行宏任务中的第一个定时器setTimeout，首先打印出2，然后遇到 Promise.resolve().then()，将其加入到微任务队列；
-8. 执行完这个宏任务，就开始执行微任务队列，打印出3；
-9. 继续执行宏任务队列中的第二个定时器，打印出6。
-
-### 30. 代码输出结果
-
-```javascript
-Promise.resolve().then(() => {
-    console.log('1');
-    throw 'Error';
-}).then(() => {
-    console.log('2');
-}).catch(() => {
-    console.log('3');
-    throw 'Error';
-}).then(() => {
-    console.log('4');
-}).catch(() => {
-    console.log('5');
-}).then(() => {
-    console.log('6');
-});
-```
-
-执行结果如下：
-
-```javascript
-1 
-3 
-5 
-6
-```
-
-在这道题目中，我们需要知道，无论是thne还是catch中，只要throw 抛出了错误，就会被catch捕获，如果没有throw出错误，就被继续执行后面的then。
-
-### 31. 代码输出结果
-
-```javascript
-setTimeout(function () {
-  console.log(1);
-}, 100);
-
-new Promise(function (resolve) {
-  console.log(2);
-  resolve();
-  console.log(3);
-}).then(function () {
-  console.log(4);
-  new Promise((resove, reject) => {
-    console.log(5);
-    setTimeout(() =>  {
-      console.log(6);
-    }, 10);
-  })
-});
-console.log(7);
-console.log(8);
-```
-
-输出结果为：
-
-```javascript
-2
-3
-7
-8
-4
-5
-6
-1
-```
-
-代码执行过程如下：
-
-1. 首先遇到定时器，将其加入到宏任务队列；
-2. 遇到Promise，首先执行里面的同步代码，打印出2，遇到resolve，将其加入到微任务队列，执行后面同步代码，打印出3；
-3. 继续执行script中的代码，打印出7和8，至此第一轮代码执行完成；
-4. 执行微任务队列中的代码，首先打印出4，如遇到Promise，执行其中的同步代码，打印出5，遇到定时器，将其加入到宏任务队列中，此时宏任务队列中有两个定时器；
-5. 执行宏任务队列中的代码，这里我们需要注意是的第一个定时器的时间为100ms，第二个定时器的时间为10ms，所以先执行第二个定时器，打印出6；
-6. 此时微任务队列为空，继续执行宏任务队列，打印出1。
-
-做完这道题目，需要格外注意，每个定时器的时间，并不是所有定时器的时间都为0。
-
-
-
-### 1. 代码输出结果
-
-```javascript
-function foo() {
-  console.log( this.a );
-}
-
-function doFoo() {
-  foo();
-}
-
-var obj = {
-  a: 1,
-  doFoo: doFoo
-};
-
-var a = 2; 
-obj.doFoo()
-```
-
-输出结果：2
-
-在Javascript中，this指向函数执行时的当前对象。在执行foo的时候，执行环境就是doFoo函数，执行环境为全局。所以，foo中的this是指向window的，所以会打印出2。
-
-### 2. 代码输出结果
-
-```javascript
-var a = 10
-var obj = {
-  a: 20,
-  say: () => {
-    console.log(this.a)
-  }
-}
-obj.say() 
-
-var anotherObj = { a: 30 } 
-obj.say.apply(anotherObj) 
-```
-
-输出结果：10  10
-
-我么知道，箭头函数时不绑定this的，它的this来自原其父级所处的上下文，所以首先会打印全局中的 a 的值10。后面虽然让say方法指向了另外一个对象，但是仍不能改变箭头函数的特性，它的this仍然是指向全局的，所以依旧会输出10。
-
-但是，如果是普通函数，那么就会有完全不一样的结果：
-
-```javascript
-var a = 10  
-var obj = {  
-  a: 20,  
-  say(){
-    console.log(this.a)  
-  }  
-}  
-obj.say()   
-var anotherObj={a:30}   
-obj.say.apply(anotherObj)
-```
-
-输出结果：20 30
-
-这时，say方法中的this就会指向他所在的对象，输出其中的a的值。
-
-### 3. 代码输出结果
-
-```javascript
-function a() {
-  console.log(this);
-}
-a.call(null);
-```
-
-打印结果：window对象
-
-根据ECMAScript262规范规定：如果第一个参数传入的对象调用者是null或者undefined，call方法将把全局对象（浏览器上是window对象）作为this的值。所以，不管传入null 还是 undefined，其this都是全局对象window。所以，在浏览器上答案是输出 window 对象。
-
-要注意的是，在严格模式中，null 就是 null，undefined 就是 undefined：
-
-```javascript
-'use strict';
-
-function a() {
-    console.log(this);
-}
-a.call(null); // null
-a.call(undefined); // undefined
-```
-
-### 4. 代码输出结果
-
-```javascript
-var obj = { 
-  name: 'cuggz', 
-  fun: function(){ 
-     console.log(this.name); 
-  } 
-} 
-obj.fun()     // cuggz
-new obj.fun() // undefined
-```
-
-### 6. 代码输出结果
-
-```javascript
-var obj = {
-   say: function() {
-     var f1 = () =>  {
-       console.log("1111", this);
-     }
-     f1();
-   },
-   pro: {
-     getPro:() =>  {
-        console.log(this);
-     }
-   }
-}
-var o = obj.say;
-o();
-obj.say();
-obj.pro.getPro();
-```
-
-输出结果：
-
-```javascript
-1111 window对象
-1111 obj对象
-window对象
-```
-
-**解析：**
-
-1. o()，o是在全局执行的，而f1是箭头函数，它是没有绑定this的，它的this指向其父级的this，其父级say方法的this指向的是全局作用域，所以会打印出window；
-2. obj.say()，谁调用say，say 的this就指向谁，所以此时this指向的是obj对象；
-3. obj.pro.getPro()，我们知道，箭头函数时不绑定this的，getPro处于pro中，而对象不构成单独的作用域，所以箭头的函数的this就指向了全局作用域window。
-
-### 7. 代码输出结果
-
-```javascript
-var myObject = {
-    foo: "bar",
-    func: function() {
-        var self = this;
-        console.log(this.foo);  
-        console.log(self.foo);  
-        (function() {
-            console.log(this.foo);  
-            console.log(self.foo);  
-        }());
-    }
-};
-myObject.func();
-```
-
-输出结果：bar bar undefined bar
-
-**解析：**
-
-1. 首先func是由myObject调用的，this指向myObject。又因为var self = this;所以self指向myObject。
-2. 这个立即执行匿名函数表达式是由window调用的，this指向window 。立即执行匿名函数的作用域处于myObject.func的作用域中，在这个作用域找不到self变量，沿着作用域链向上查找self变量，找到了指向 myObject对象的self。
-
-### 8. 代码输出问题
-
-```javascript
-window.number = 2;
-var obj = {
- number: 3,
- db1: (function(){
-   console.log(this);
-   this.number *= 4;
-   return function(){
-     console.log(this);
-     this.number *= 5;
-   }
- })()
-}
-var db1 = obj.db1;
-db1();
-obj.db1();
-console.log(obj.number);     // 15
-console.log(window.number);  // 40
-```
-
-这道题目看清起来有点乱，但是实际上是考察this指向的:
-
-1. 执行db1()时，this指向全局作用域，所以window.number * 4 = 8，然后执行匿名函数， 所以window.number * 5 = 40；
-2. 执行obj.db1();时，this指向obj对象，执行匿名函数，所以obj.numer * 5 = 15。
-
-### 9. 代码输出结果
-
-```javascript
-var length = 10;
-function fn() {
-    console.log(this.length);
-}
- 
-var obj = {
-  length: 5,
-  method: function(fn) {
-    fn();
-    arguments[0]();
-  }
-};
- 
-obj.method(fn, 1);
-```
-
-输出结果： 10 2
-
-**解析：**
-
-1. 第一次执行fn()，this指向window对象，输出10。
-2. 第二次执行arguments0，相当于arguments调用方法，this指向arguments，而这里传了两个参数，故输出arguments长度为2。
-
-### 10. 代码输出结果
-
-```javascript
-var a = 1;
-function printA(){
-  console.log(this.a);
-}
-var obj={
-  a:2,
-  foo:printA,
-  bar:function(){
-    printA();
+  public greet(): void {
+    console.log('Hello, ' + this.name);
   }
 }
 
-obj.foo(); // 2
-obj.bar(); // 1
-var foo = obj.foo;
-foo(); // 1
-```
+class U {
+  public name: string = ''
 
-输出结果： 2 1 1
-
-**解析：**
-
-1. obj.foo()，foo 的this指向obj对象，所以a会输出2；
-2. obj.bar()，printA在bar方法中执行，所以此时printA的this指向的是window，所以会输出1；
-3. foo()，foo是在全局对象中执行的，所以其this指向的是window，所以会输出1；
-
-### 11. 代码输出结果
-
-```javascript
-var x = 3;
-var y = 4;
-var obj = {
-    x: 1,
-    y: 6,
-    getX: function() {
-        var x = 5;
-        return function() {
-            return this.x;
-        }();
-    },
-    getY: function() {
-        var y = 7;
-        return this.y;
-    }
+  public greet(): void {
+    console.log('Greetings, ' + this.name);
+  }
 }
-console.log(obj.getX()) // 3
-console.log(obj.getY()) // 6
 ```
 
-输出结果：3  6
+能把类型为`T`的值赋给类型为`U`的变量吗？
 
-**解析：**
-
-1. 我们知道，匿名函数的this是指向全局对象的，所以this指向window，会打印出3；
-2. getY是由obj调用的，所以其this指向的是obj对象，会打印出6。
-
-### 12. 代码输出结果
-
-```javascript
- var a = 10; 
- var obt = { 
-   a: 20, 
-   fn: function(){ 
-     var a = 30; 
-     console.log(this.a)
-   } 
- }
- obt.fn();  // 20
- obt.fn.call(); // 10
- (obt.fn)(); // 20
+```typescript
+let u: U = new T(); // 是否允许？
 ```
 
-输出结果： 20  10  20
+能把类型为`T`的值传递给接受类型为`U`的参数的函数吗？
 
-**解析：**
-
-1. obt.fn()，fn是由obt调用的，所以其this指向obt对象，会打印出20；
-2. obt.fn.call()，这里call的参数啥都没写，就表示null，我们知道如果call的参数为undefined或null，那么this就会指向全局对象this，所以会打印出 10；
-3. (obt.fn)()， 这里给表达式加了括号，而括号的作用是改变表达式的运算顺序，而在这里加与不加括号并无影响；相当于  obt.fn()，所以会打印出 20；
-
-### 13. 代码输出结果
-
-```javascript
-function a(xx){
-  this.x = xx;
-  return this
-};
-var x = a(5);
-var y = a(6);
-
-console.log(x.x)  // undefined
-console.log(y.x)  // 6
-```
-
-输出结果： undefined  6
-
-**解析：**
-
-1. 最关键的就是var x = a(5)，函数a是在全局作用域调用，所以函数内部的this指向window对象。**所以 this.x = 5 就相当于：window.x = 5。** 之后 return this，也就是说 var x = a(5) 中的x变量的值是window，这里的x将函数内部的x的值覆盖了。然后执行console.log(x.x)， 也就是console.log(window.x)，而window对象中没有x属性，所以会输出undefined。
-2. 当指向y.x时，会给全局变量中的x赋值为6，所以会打印出6。
-
-### 14. 代码输出结果
-
-```javascript
-function foo(something){
-    this.a = something
+```typescript
+function greeter(u: U) {
+  console.log('To ' + u.name);
+  u.greet();
 }
 
-var obj1 = {
-    foo: foo
+let t: T = new T();
+greeter(t); // 是否允许？
+```
+
+换句话说，我们将采取下面哪种方法呢：
+
+- `T`和`U`没有继承关系或没有`implements`相同的接口，但由于它们具有相同的`public`API，它们“在某种程度上是相等的”，所以上述两个问题的答案都是“是”；
+- `T`和`U`没有继承关系或没有`implements`相同的接口，应当始终被视为完全不同的类型，因此上述两个问题的答案都是“否”。
+
+采用第一种方法的语言支持structural typing，而采用第二种方法的语言则不支持structural typing。目前TypeScript支持structural typing，而ArkTS不支持。
+
+structural typing是否有助于生成清晰、易理解的代码，关于这一点并没有定论。那为什么ArkTS不支持structural typing呢？
+
+因为对structural typing的支持是一个重大的特性，需要在语言规范、编译器和运行时进行大量的考虑和仔细的实现。另外，由于ArkTS使用静态类型，运行时为了支持这个特性需要额外的性能开销。
+
+鉴于此，当前我们还不支持该特性。根据实际场景的需求和反馈，我们后续会重新加以考虑。更多案例和建议请参考[约束说明](#约束说明)。
+
+## 约束说明
+
+### 对象的属性名必须是合法的标识符
+
+**规则：**`arkts-identifiers-as-prop-names`
+
+**级别：错误**
+
+在ArkTS中，对象的属性名不能为数字或字符串。例外：ArkTS支持属性名为字符串字面量和枚举中的字符串值。通过属性名访问类的属性，通过数值索引访问数组元素。
+
+**TypeScript**
+
+```typescript
+var x = { 'name': 'x', 2: '3' };
+
+console.log(x['name']);
+console.log(x[2]);
+```
+
+**ArkTS**
+
+```typescript
+class X {
+  public name: string = ''
+}
+let x: X = { name: 'x' };
+console.log(x.name);
+
+let y = ['a', 'b', 'c'];
+console.log(y[2]);
+
+// 在需要通过非标识符（即不同类型的key）获取数据的场景中，使用Map<Object, some_type>。
+let z = new Map<Object, string>();
+z.set('name', '1');
+z.set(2, '2');
+console.log(z.get('name'));
+console.log(z.get(2));
+
+enum Test {
+  A = 'aaa',
+  B = 'bbb'
 }
 
-var obj2 = {}
-
-obj1.foo(2); 
-console.log(obj1.a); // 2
-
-obj1.foo.call(obj2, 3);
-console.log(obj2.a); // 3
-
-var bar = new obj1.foo(4)
-console.log(obj1.a); // 2
-console.log(bar.a); // 4
+let obj: Record<string, number> = {
+  [Test.A]: 1,   // 枚举中的字符串值
+  [Test.B]: 2,   // 枚举中的字符串值
+  ['value']: 3   // 字符串字面量
+}
 ```
 
-输出结果： 2  3  2  4
+**相关约束**
 
-**解析：**
+- 不支持Symbol() API
+- 不支持通过索引访问字段
+- 不支持delete运算符
+- 仅允许在表达式中使用typeof运算符
+- 不支持in运算符
+- 限制使用标准库
 
-1. 首先执行obj1.foo(2); 会在obj中添加a属性，其值为2。之后执行obj1.a，a是右obj1调用的，所以this指向obj，打印出2；
-2. 执行 obj1.foo.call(obj2, 3) 时，会将foo的this指向obj2，后面就和上面一样了，所以会打印出3；
-3. obj1.a会打印出2；
-4. 最后就是考察this绑定的优先级了，new 绑定是比隐式绑定优先级高，所以会输出4。
+### 不支持`Symbol()`API
 
-### 15. 代码输出结果
+**规则：**`arkts-no-symbol`
 
-```javascript
-function foo(something){
-    this.a = something
+**级别：错误**
+
+TypeScript中的`Symbol()`API用于在运行时生成唯一的属性名称。由于该API的常见使用场景在静态类型语言中没有意义，因此，ArkTS不支持`Symbol()`API。在ArkTS中，对象布局在编译时就确定了，且不能在运行时被更改。
+
+ArkTS只支持`Symbol.iterator`。
+
+**相关约束**
+
+- 仅支持属性名为标识符的对象
+- 不支持通过索引访问字段
+- 不支持delete运算符
+- 仅允许在表达式中使用typeof运算符
+- 不支持in运算符
+- 限制使用标准库
+
+### 不支持以`#`开头的私有字段
+
+**规则：**`arkts-no-private-identifiers`
+
+**级别：错误**
+
+ArkTS不支持使用`#`符号开头声明的私有字段。改用`private`关键字。
+
+**TypeScript**
+
+```typescript
+class C {
+  #foo: number = 42
+}
+```
+
+**ArkTS**
+
+```typescript
+class C {
+  private foo: number = 42
+}
+```
+
+### 类型、命名空间的命名必须唯一
+
+**规则：**`arkts-unique-names`
+
+**级别：错误**
+
+类型（类、接口、枚举）、命名空间的命名必须唯一，且与其他名称（例如：变量名、函数名）不同。
+
+**TypeScript**
+
+```typescript
+let X: string
+type X = number[] // 类型的别名与变量同名
+```
+
+**ArkTS**
+
+```typescript
+let X: string
+type T = number[] // 为避免名称冲突，此处不允许使用X
+```
+
+### 使用`let`而非`var`
+
+**规则：**`arkts-no-var`
+
+**级别：错误**
+
+`let`关键字可以在块级作用域中声明变量，帮助程序员避免错误。因此，ArkTS不支持`var`，请使用`let`声明变量。
+
+**TypeScript**
+
+```typescript
+function f(shouldInitialize: boolean) {
+  if (shouldInitialize) {
+     var x = 'b';
+  }
+  return x;
 }
 
-var obj1 = {}
+console.log(f(true));  // b
+console.log(f(false)); // undefined
 
-var bar = foo.bind(obj1);
-bar(2);
-console.log(obj1.a); // 2
-
-var baz = new bar(3);
-console.log(obj1.a); // 2
-console.log(baz.a); // 3
+let upperLet = 0;
+{
+  var scopedVar = 0;
+  let scopedLet = 0;
+  upperLet = 5;
+}
+scopedVar = 5; // 可见
+scopedLet = 5; // 编译时错误
 ```
 
-输出结果： 2  2  3
+**ArkTS**
 
-这道题目和上面题目差不多，主要都是考察this绑定的优先级。记住以下结论即可：**this绑定的优先级：new绑定 > 显式绑定 > 隐式绑定 > 默认绑定。**
+```typescript
+function f(shouldInitialize: boolean): string {
+  let x: string = 'a';
+  if (shouldInitialize) {
+    x = 'b';
+  }
+  return x;
+}
 
+console.log(f(true));  // b
+console.log(f(false)); // a
 
-
-### 1. 代码输出结果
-
-```javascript
-(function(){
-   var x = y = 1;
-})();
-var z;
-
-console.log(y); // 1
-console.log(z); // undefined
-console.log(x); // Uncaught ReferenceError: x is not defined
+let upperLet = 0;
+let scopedVar = 0;
+{
+  let scopedLet = 0;
+  upperLet = 5;
+}
+scopedVar = 5;
+scopedLet = 5; //编译时错误
 ```
 
-这段代码的关键在于：var x = y = 1; 实际上这里是从右往左执行的，首先执行y = 1, 因为y没有使用var声明，所以它是一个全局变量，然后第二步是将y赋值给x，讲一个全局变量赋值给了一个局部变量，最终，x是一个局部变量，y是一个全局变量，所以打印x是报错。
+### 使用具体的类型而非`any`或`unknown`
 
-### 2. 代码输出结果
+**规则：**`arkts-no-any-unknown`
 
-```javascript
-var a, b
-(function () {
-   console.log(a);
-   console.log(b);
-   var a = (b = 3);
-   console.log(a);
-   console.log(b);   
-})()
-console.log(a);
-console.log(b);
+**级别：错误**
+
+ArkTS不支持`any`和`unknown`类型。显式指定具体类型。
+
+**TypeScript**
+
+```typescript
+let value1: any
+value1 = true;
+value1 = 42;
+
+let value2: unknown
+value2 = true;
+value2 = 42;
 ```
 
-输出结果：
+**ArkTS**
 
-```javascript
-undefined 
-undefined 
-3 
-3 
-undefined 
-3
+```typescript
+let value_b: boolean = true; // 或者 let value_b = true
+let value_n: number = 42; // 或者 let value_n = 42
+let value_o1: Object = true;
+let value_o2: Object = 42;
 ```
 
-这个题目和上面题目考察的知识点类似，b赋值为3，b此时是一个全局变量，而将3赋值给a，a是一个局部变量，所以最后打印的时候，a仍旧是undefined。
+**相关约束**
 
-### 3. 代码输出结果
+强制进行严格类型检查
 
-```javascript
-var friendName = 'World';
-(function() {
-  if (typeof friendName === 'undefined') {
-    var friendName = 'Jack';
-    console.log('Goodbye ' + friendName);
+### 使用`class`而非具有call signature的类型
+
+**规则：**`arkts-no-call-signatures`
+
+**级别：错误**
+
+ArkTS不支持对象类型中包含call signature。
+
+**TypeScript**
+
+```typescript
+type DescribableFunction = {
+  description: string
+  (someArg: string): string // call signature
+}
+
+function doSomething(fn: DescribableFunction): void {
+  console.log(fn.description + ' returned ' + fn(''));
+}
+```
+
+**ArkTS**
+
+```typescript
+class DescribableFunction {
+  description: string
+  public invoke(someArg: string): string {
+    return someArg;
+  }
+  constructor() {
+    this.description = 'desc';
+  }
+}
+
+function doSomething(fn: DescribableFunction): void {
+  console.log(fn.description + ' returned ' + fn.invoke(''));
+}
+
+doSomething(new DescribableFunction());
+```
+
+**相关约束**
+
+使用class而非具有构造签名的类型
+
+### 使用`class`而非具有构造签名的类型
+
+**规则：**`arkts-no-ctor-signatures-type`
+
+**级别：错误**
+
+ArkTS不支持对象类型中的构造签名。改用类。
+
+**TypeScript**
+
+```typescript
+class SomeObject {}
+
+type SomeConstructor = {
+  new (s: string): SomeObject
+}
+
+function fn(ctor: SomeConstructor) {
+  return new ctor('hello');
+}
+```
+
+**ArkTS**
+
+```typescript
+class SomeObject {
+  public f: string
+  constructor (s: string) {
+    this.f = s;
+  }
+}
+
+function fn(s: string): SomeObject {
+  return new SomeObject(s);
+}
+```
+
+**相关约束**
+
+使用class而非具有call signature的类型
+
+### 仅支持一个静态块
+
+**规则：**`arkts-no-multiple-static-blocks`
+
+**级别：错误**
+
+ArkTS不允许类中有多个静态块，如果存在多个静态块语句，请合并到一个静态块中。
+
+**TypeScript**
+
+```typescript
+class C {
+  static s: string
+
+  static {
+    C.s = 'aa'
+  }
+  static {
+    C.s = C.s + 'bb'
+  }
+}
+```
+
+**ArkTS**
+
+```typescript
+class C {
+  static s: string
+
+  static {
+    C.s = 'aa'
+    C.s = C.s + 'bb'
+  }
+}
+```
+
+**说明**
+
+当前不支持静态块的语法。支持该语法后，在.ets文件中使用静态块须遵循本约束。
+
+### 不支持index signature
+
+**规则：**`arkts-no-indexed-signatures`
+
+**级别：错误**
+
+ArkTS不允许index signature，改用数组。
+
+**TypeScript**
+
+```typescript
+// 带index signature的接口：
+interface StringArray {
+  [index: number]: string
+}
+
+function getStringArray(): StringArray {
+  return ['a', 'b', 'c'];
+}
+
+const myArray: StringArray = getStringArray();
+const secondItem = myArray[1];
+```
+
+**ArkTS**
+
+```typescript
+class X {
+  public f: string[] = []
+}
+
+let myArray: X = new X();
+const secondItem = myArray.f[1];
+```
+
+### 使用继承而非intersection type
+
+**规则：**`arkts-no-intersection-types`
+
+**级别：错误**
+
+目前ArkTS不支持intersection type，可以使用继承作为替代方案。
+
+**TypeScript**
+
+```typescript
+interface Identity {
+  id: number
+  name: string
+}
+
+interface Contact {
+  email: string
+  phoneNumber: string
+}
+
+type Employee = Identity & Contact
+```
+
+**ArkTS**
+
+```typescript
+interface Identity {
+  id: number
+  name: string
+}
+
+interface Contact {
+  email: string
+  phoneNumber: string
+}
+
+interface Employee extends Identity,  Contact {}
+```
+
+### 不支持`this`类型
+
+**规则：**`arkts-no-typing-with-this`
+
+**级别：错误**
+
+ArkTS不支持`this`类型，改用显式具体类型。
+
+**TypeScript**
+
+```typescript
+interface ListItem {
+  getHead(): this
+}
+
+class C {
+  n: number = 0
+
+  m(c: this) {
+    // ...
+  }
+}
+```
+
+**ArkTS**
+
+```typescript
+interface ListItem {
+  getHead(): ListItem
+}
+
+class C {
+  n: number = 0
+
+  m(c: C) {
+    // ...
+  }
+}
+```
+
+### 不支持条件类型
+
+**规则：**`arkts-no-conditional-types`
+
+**级别：错误**
+
+ArkTS不支持条件类型别名，引入带显式约束的新类型，或使用`Object`重写逻辑。
+不支持`infer`关键字。
+
+**TypeScript**
+
+```typescript
+type X<T> = T extends number ? T: never
+type Y<T> = T extends Array<infer Item> ? Item: never
+```
+
+**ArkTS**
+
+```typescript
+// 在类型别名中提供显式约束
+type X1<T extends number> = T
+
+// 用Object重写，类型控制较少，需要更多的类型检查以确保安全
+type X2<T> = Object
+
+// Item必须作为泛型参数使用，并能正确实例化
+type YI<Item, T extends Array<Item>> = Item
+```
+
+### 不支持在`constructor`中声明字段
+
+**规则：**`arkts-no-ctor-prop-decls`
+
+**级别：错误**
+
+ArkTS不支持在`constructor`中声明类字段。在`class`中声明这些字段。
+
+**TypeScript**
+
+```typescript
+class Person {
+  constructor(
+    protected ssn: string,
+    private firstName: string,
+    private lastName: string
+  ) {
+    this.ssn = ssn;
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+
+  getFullName(): string {
+    return this.firstName + ' ' + this.lastName;
+  }
+}
+```
+
+**ArkTS**
+
+```typescript
+class Person {
+  protected ssn: string
+  private firstName: string
+  private lastName: string
+
+  constructor(ssn: string, firstName: string, lastName: string) {
+    this.ssn = ssn;
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+
+  getFullName(): string {
+    return this.firstName + ' ' + this.lastName;
+  }
+}
+```
+
+### 接口中不支持构造签名
+
+**规则：**`arkts-no-ctor-signatures-iface`
+
+**级别：错误**
+
+ArkTS不支持在接口中使用构造签名。改用函数或者方法。
+
+**TypeScript**
+
+```typescript
+interface I {
+  new (s: string): I
+}
+
+function fn(i: I) {
+  return new i('hello');
+}
+```
+
+**ArkTS**
+
+```typescript
+interface I {
+  create(s: string): I
+}
+
+function fn(i: I) {
+  return i.create('hello');
+}
+```
+
+**相关约束**
+
+使用class而非具有构造签名的类型
+
+### 不支持索引访问类型
+
+**规则：**`arkts-no-aliases-by-index`
+
+**级别：错误**
+
+ArkTS不支持索引访问类型。
+
+### 不支持通过索引访问字段
+
+**规则：**`arkts-no-props-by-index`
+
+**级别：错误**
+
+ArkTS不支持动态声明字段，不支持动态访问字段。只能访问已在类中声明或者继承可见的字段，访问其他字段将会造成编译时错误。
+使用点操作符访问字段，例如（`obj.field`），不支持索引访问（`obj[field]`）。
+ArkTS支持通过索引访问`TypedArray`（例如`Int32Array`）中的元素。
+
+**TypeScript**
+
+```typescript
+class Point {
+  x: string = ''
+  y: string = ''
+}
+let p: Point = {x: '1', y: '2'};
+console.log(p['x']);
+
+class Person {
+  name: string = ''
+  age: number = 0;
+  [key: string]: string | number
+}
+
+let person: Person = {
+  name: 'John',
+  age: 30,
+  email: '***@example.com',
+  phoneNumber: '18*********',
+}
+```
+
+**ArkTS**
+
+```typescript
+class Point {
+  x: string = ''
+  y: string = ''
+}
+let p: Point = {x: '1', y: '2'};
+console.log(p.x);
+
+class Person {
+  name: string
+  age: number
+  email: string
+  phoneNumber: string
+
+  constructor(name: string, age: number, email: string,
+        phoneNumber: string) {
+    this.name = name;
+    this.age = age;
+    this.email = email;
+    this.phoneNumber = phoneNumber;
+  }
+}
+
+let person = new Person('John', 30, '***@example.com', '18*********');
+console.log(person['name']);     // 编译时错误
+console.log(person.unknownProperty); // 编译时错误
+
+let arr = new Int32Array(1);
+arr[0];
+```
+
+### 不支持structural typing
+
+**规则：**`arkts-no-structural-typing`
+
+**级别：错误**
+
+ArkTS不支持structural typing，编译器无法比较两种类型的`public`API并决定它们是否相同。使用其他机制，例如继承、接口或类型别名。
+
+**TypeScript**
+
+```typescript
+interface I1 {
+  f(): string
+}
+
+interface I2 { // I2等价于I1
+  f(): string
+}
+
+class X {
+  n: number = 0
+  s: string = ''
+}
+
+class Y { // Y等价于X
+  n: number = 0
+  s: string = ''
+}
+
+let x = new X();
+let y = new Y();
+
+console.log('Assign X to Y');
+y = x;
+
+console.log('Assign Y to X');
+x = y;
+
+function foo(x: X) {
+  console.log(x.n + x.s);
+}
+
+// 由于X和Y的API是等价的，所以X和Y是等价的
+foo(new X());
+foo(new Y());
+```
+
+**ArkTS**
+
+```typescript
+interface I1 {
+  f(): string
+}
+
+type I2 = I1 // I2是I1的别名
+
+class B {
+  n: number = 0
+  s: string = ''
+}
+
+// D是B的继承类，构建了子类型和父类型的关系
+class D extends B {
+  constructor() {
+    super()
+  }
+}
+
+let b = new B();
+let d = new D();
+
+console.log('Assign D to B');
+b = d; // 合法赋值，因为B是D的父类
+
+// 将b赋值给d将会引起编译时错误
+// d = b
+
+interface Z {
+   n: number
+   s: string
+}
+
+// 类X implements 接口Z，构建了X和Y的关系
+class X implements Z {
+  n: number = 0
+  s: string = ''
+}
+
+// 类Y implements 接口Z，构建了X和Y的关系
+class Y implements Z {
+  n: number = 0
+  s: string = ''
+}
+
+let x: Z = new X();
+let y: Z = new Y();
+
+console.log('Assign X to Y');
+y = x // 合法赋值，它们是相同的类型
+
+console.log('Assign Y to X');
+x = y // 合法赋值，它们是相同的类型
+
+function foo(c: Z): void {
+  console.log(c.n + c.s);
+}
+
+// 类X和类Y implement 相同的接口，因此下面的两个函数调用都是合法的
+foo(new X());
+foo(new Y());
+```
+
+### 需要显式标注泛型函数类型实参
+
+**规则：**`arkts-no-inferred-generic-params`
+
+**级别：错误**
+
+如果可以从传递给泛型函数的参数中推断出具体类型，ArkTS允许省略泛型类型实参。否则，省略泛型类型实参会发生编译时错误。
+禁止仅基于泛型函数返回类型推断泛型类型参数。
+
+**TypeScript**
+
+```typescript
+function choose<T>(x: T, y: T): T {
+  return Math.random() < 0.5 ? x: y;
+}
+
+let x = choose(10, 20);   // 推断choose<number>(...)
+let y = choose('10', 20); // 编译时错误
+
+function greet<T>(): T {
+  return 'Hello' as T;
+}
+let z = greet() // T的类型被推断为“unknown”
+```
+
+**ArkTS**
+
+```typescript
+function choose<T>(x: T, y: T): T {
+  return Math.random() < 0.5 ? x: y;
+}
+
+let x = choose(10, 20);   // 推断choose<number>(...)
+let y = choose('10', 20); // 编译时错误
+
+function greet<T>(): T {
+  return 'Hello' as T;
+}
+let z = greet<string>();
+```
+
+### 需要显式标注对象字面量的类型
+
+**规则：**`arkts-no-untyped-obj-literals`
+
+**级别：错误**
+
+在ArkTS中，需要显式标注对象字面量的类型，否则，将发生编译时错误。在某些场景下，编译器可以根据上下文推断出字面量的类型。
+
+在以下上下文中不支持使用字面量初始化类和接口：
+
+- 初始化具有`any`、`Object`或`object`类型的任何对象
+- 初始化带有方法的类或接口
+- 初始化包含自定义含参数的构造函数的类
+- 初始化带`readonly`字段的类
+
+**例子1**
+
+**TypeScript**
+
+```typescript
+let o1 = {n: 42, s: 'foo'};
+let o2: Object = {n: 42, s: 'foo'};
+let o3: object = {n: 42, s: 'foo'};
+
+let oo: Object[] = [{n: 1, s: '1'}, {n: 2, s: '2'}];
+```
+
+**ArkTS**
+
+```typescript
+class C1 {
+  n: number = 0
+  s: string = ''
+}
+
+let o1: C1 = {n: 42, s: 'foo'};
+let o2: C1 = {n: 42, s: 'foo'};
+let o3: C1 = {n: 42, s: 'foo'};
+
+let oo: C1[] = [{n: 1, s: '1'}, {n: 2, s: '2'}];
+```
+
+**例子2**
+
+**TypeScript**
+
+```typescript
+class C2 {
+  s: string
+  constructor(s: string) {
+    this.s = 's =' + s;
+  }
+}
+let o4: C2 = {s: 'foo'};
+```
+
+**ArkTS**
+
+```typescript
+class C2 {
+  s: string
+  constructor(s: string) {
+    this.s = 's =' + s;
+  }
+}
+let o4 = new C2('foo');
+```
+
+**例子3**
+
+**TypeScript**
+
+```typescript
+class C3 {
+  readonly n: number = 0
+  readonly s: string = ''
+}
+let o5: C3 = {n: 42, s: 'foo'};
+```
+
+**ArkTS**
+
+```typescript
+class C3 {
+  n: number = 0
+  s: string = ''
+}
+let o5: C3 = {n: 42, s: 'foo'};
+```
+
+**例子4**
+
+**TypeScript**
+
+```typescript
+abstract class A {}
+let o6: A = {};
+```
+
+**ArkTS**
+
+```typescript
+abstract class A {}
+class C extends A {}
+let o6: C = {}; // 或 let o6: C = new C()
+```
+
+**例子5**
+
+**TypeScript**
+
+```typescript
+class C4 {
+  n: number = 0
+  s: string = ''
+  f() {
+    console.log('Hello');
+  }
+}
+let o7: C4 = {n: 42, s: 'foo', f: () => {}};
+```
+
+**ArkTS**
+
+```typescript
+class C4 {
+  n: number = 0
+  s: string = ''
+  f() {
+    console.log('Hello');
+  }
+}
+let o7 = new C4();
+o7.n = 42;
+o7.s = 'foo';
+```
+
+**例子6**
+
+**TypeScript**
+
+```typescript
+class Point {
+  x: number = 0
+  y: number = 0
+}
+
+function getPoint(o: Point): Point {
+  return o;
+}
+
+// TS支持structural typing，可以推断p的类型为Point
+let p = {x: 5, y: 10};
+getPoint(p);
+
+// 可通过上下文推断出对象字面量的类型为Point
+getPoint({x: 5, y: 10});
+```
+
+**ArkTS**
+
+```typescript
+class Point {
+  x: number = 0
+  y: number = 0
+
+  // 在字面量初始化之前，使用constructor()创建一个有效对象。
+  // 由于没有为Point定义构造函数，编译器将自动添加一个默认构造函数。
+}
+
+function getPoint(o: Point): Point {
+  return o;
+}
+
+// 字面量初始化需要显式定义类型
+let p: Point = {x: 5, y: 10};
+getPoint(p);
+
+// getPoint接受Point类型，字面量初始化生成一个Point的新实例
+getPoint({x: 5, y: 10});
+```
+
+**相关约束**
+
+- 对象字面量不能用于类型声明
+- 数组字面量必须仅包含可推断类型的元素
+
+### 对象字面量不能用于类型声明
+
+**规则：**`arkts-no-obj-literals-as-types`
+
+**级别：错误**
+
+ArkTS不支持使用对象字面量声明类型，可以使用类或者接口声明类型。
+
+**TypeScript**
+
+```typescript
+let o: {x: number, y: number} = {
+  x: 2,
+  y: 3
+}
+
+type S = Set<{x: number, y: number}>
+```
+
+**ArkTS**
+
+```typescript
+class O {
+  x: number = 0
+  y: number = 0
+}
+
+let o: O = {x: 2, y: 3};
+
+type S = Set<O>
+```
+
+**相关约束**
+
+- 对象字面量必须对应某些显式声明的类或接口
+- 数组字面量必须仅包含可推断类型的元素
+
+### 数组字面量必须仅包含可推断类型的元素
+
+**规则：**`arkts-no-noninferrable-arr-literals`
+
+**级别：错误**
+
+本质上，ArkTS将数组字面量的类型推断为数组所有元素的联合类型。如果其中任何一个元素的类型无法根据上下文推导出来（例如，无类型的对象字面量），则会发生编译时错误。
+
+**TypeScript**
+
+```typescript
+let a = [{n: 1, s: '1'}, {n: 2, s: '2'}];
+```
+
+**ArkTS**
+
+```typescript
+class C {
+  n: number = 0
+  s: string = ''
+}
+
+let a1 = [{n: 1, s: '1'} as C, {n: 2, s: '2'} as C]; // a1的类型为“C[]”
+let a2: C[] = [{n: 1, s: '1'}, {n: 2, s: '2'}];    // a2的类型为“C[]”
+```
+
+**相关约束**
+
+- 对象字面量必须对应某些显式声明的类或接口
+- 对象字面量不能用于类型声明
+
+### 使用箭头函数而非函数表达式
+
+**规则：**`arkts-no-func-expressions`
+
+**级别：错误**
+
+ArkTS不支持函数表达式，使用箭头函数。
+
+**TypeScript**
+
+```typescript
+let f = function (s: string) {
+  console.log(s);
+}
+```
+
+**ArkTS**
+
+```typescript
+let f = (s: string) => {
+  console.log(s);
+}
+```
+
+### 不支持使用类表达式
+
+**规则：**`arkts-no-class-literals`
+
+**级别：错误**
+
+ArkTS不支持使用类表达式，必须显式声明一个类。
+
+**TypeScript**
+
+```typescript
+const Rectangle = class {
+  constructor(height: number, width: number) {
+    this.height = height;
+    this.width = width;
+  }
+
+  height
+  width
+}
+
+const rectangle = new Rectangle(0.0, 0.0);
+```
+
+**ArkTS**
+
+```typescript
+class Rectangle {
+  constructor(height: number, width: number) {
+    this.height = height;
+    this.width = width;
+  }
+
+  height: number
+  width: number
+}
+
+const rectangle = new Rectangle(0.0, 0.0);
+```
+
+### 类不允许`implements`
+
+**规则：**`arkts-implements-only-iface`
+
+**级别：错误**
+
+ArkTS不允许类被`implements`，只有接口可以被`implements`。
+
+**TypeScript**
+
+```typescript
+class C {
+  foo() {}
+}
+
+class C1 implements C {
+  foo() {}
+}
+```
+
+**ArkTS**
+
+```typescript
+interface C {
+  foo(): void
+}
+
+class C1 implements C {
+  foo() {}
+}
+```
+
+### 不支持修改对象的方法
+
+**规则：**`arkts-no-method-reassignment`
+
+**级别：错误**
+
+ArkTS不支持修改对象的方法。在静态语言中，对象的布局是确定的。一个类的所有对象实例享有同一个方法。
+如果需要为某个特定的对象增加方法，可以封装函数或者使用继承的机制。
+
+**TypeScript**
+
+```typescript
+class C {
+  foo() {
+    console.log('foo');
+  }
+}
+
+function bar() {
+  console.log('bar');
+}
+
+let c1 = new C();
+let c2 = new C();
+c2.foo = bar;
+
+c1.foo(); // foo
+c2.foo(); // bar
+```
+
+**ArkTS**
+
+```typescript
+class C {
+  foo() {
+    console.log('foo');
+  }
+}
+
+class Derived extends C {
+  foo() {
+    console.log('Extra');
+    super.foo();
+  }
+}
+
+function bar() {
+  console.log('bar');
+}
+
+let c1 = new C();
+let c2 = new C();
+c1.foo(); // foo
+c2.foo(); // foo
+
+let c3 = new Derived();
+c3.foo(); // Extra foo
+```
+
+### 类型转换仅支持`as T`语法
+
+**规则：**`arkts-as-casts`
+
+**级别：错误**
+
+在ArkTS中，`as`关键字是类型转换的唯一语法，错误的类型转换会导致编译时错误或者运行时抛出`ClassCastException`异常。ArkTS不支持使用`<type>`语法进行类型转换。
+
+当需要将`primitive`类型（如`number`或`boolean`）转换成引用类型时，请使用`new`表达式。
+
+**TypeScript**
+
+```typescript
+class Shape {}
+class Circle extends Shape { x: number = 5 }
+class Square extends Shape { y: string = 'a' }
+
+function createShape(): Shape {
+  return new Circle();
+}
+
+let c1 = <Circle> createShape();
+
+let c2 = createShape() as Circle;
+
+// 如果转换错误，不会产生编译时或运行时报错
+let c3 = createShape() as Square;
+console.log(c3.y); // undefined
+
+// 在TS中，由于`as`关键字不会在运行时生效，所以`instanceof`的左操作数不会在运行时被装箱成引用类型
+let e1 = (5.0 as Number) instanceof Number; // false
+
+// 创建Number对象，获得预期结果：
+let e2 = (new Number(5.0)) instanceof Number; // true
+```
+
+**ArkTS**
+
+```typescript
+class Shape {}
+class Circle extends Shape { x: number = 5 }
+class Square extends Shape { y: string = 'a' }
+
+function createShape(): Shape {
+  return new Circle();
+}
+
+let c2 = createShape() as Circle;
+
+// 运行时抛出ClassCastException异常：
+let c3 = createShape() as Square;
+
+// 创建Number对象，获得预期结果：
+let e2 = (new Number(5.0)) instanceof Number; // true
+```
+
+### 不支持JSX表达式
+
+**规则：**`arkts-no-jsx`
+
+**级别：错误**
+
+不支持使用JSX。
+
+### 一元运算符`+`、`-`和`~`仅适用于数值类型
+
+**规则：**`arkts-no-polymorphic-unops`
+
+**级别：错误**
+
+ArkTS仅允许一元运算符用于数值类型，否则会发生编译时错误。与TypeScript不同，ArkTS不支持隐式将字符串转换成数值，必须进行显式转换。
+
+**TypeScript**
+
+```typescript
+let a = +5;    // 5（number类型）
+let b = +'5';    // 5（number类型）
+let c = -5;    // -5（number类型）
+let d = -'5';    // -5（number类型）
+let e = ~5;    // -6（number类型）
+let f = ~'5';    // -6（number类型）
+let g = +'string'; // NaN（number类型）
+
+function returnTen(): string {
+  return '-10';
+}
+
+function returnString(): string {
+  return 'string';
+}
+
+let x = +returnTen();  // -10（number类型）
+let y = +returnString(); // NaN
+```
+
+**ArkTS**
+
+```typescript
+let a = +5;    // 5（number类型）
+let b = +'5';    // 编译时错误
+let c = -5;    // -5（number类型）
+let d = -'5';    // 编译时错误
+let e = ~5;    // -6（number类型）
+let f = ~'5';    // 编译时错误
+let g = +'string'; // 编译时错误
+
+function returnTen(): string {
+  return '-10';
+}
+
+function returnString(): string {
+  return 'string';
+}
+
+let x = +returnTen();  // 编译时错误
+let y = +returnString(); // 编译时错误
+```
+
+### 不支持`delete`运算符
+
+**规则：**`arkts-no-delete`
+
+**级别：错误**
+
+ArkTS中，对象布局在编译时就确定了，且不能在运行时被更改。因此，删除属性的操作没有意义。
+
+**TypeScript**
+
+```typescript
+class Point {
+  x?: number = 0.0
+  y?: number = 0.0
+}
+
+let p = new Point();
+delete p.y;
+```
+
+**ArkTS**
+
+```typescript
+// 可以声明一个可空类型并使用null作为缺省值
+class Point {
+  x: number | null = 0
+  y: number | null = 0
+}
+
+let p = new Point();
+p.y = null;
+```
+
+**相关约束**
+
+- 对象的属性名必须是合法的标识符
+- 不支持Symbol() API
+- 不支持通过索引访问字段
+- 仅允许在表达式中使用typeof运算符
+- 不支持in运算符
+
+### 仅允许在表达式中使用`typeof`运算符
+
+**规则：**`arkts-no-type-query`
+
+**级别：错误**
+
+ArkTS仅支持在表达式中使用`typeof`运算符，不允许使用`typeof`作为类型。
+
+**TypeScript**
+
+```typescript
+let n1 = 42;
+let s1 = 'foo';
+console.log(typeof n1); // 'number'
+console.log(typeof s1); // 'string'
+let n2: typeof n1
+let s2: typeof s1
+```
+
+**ArkTS**
+
+```typescript
+let n1 = 42;
+let s1 = 'foo';
+console.log(typeof n1); // 'number'
+console.log(typeof s1); // 'string'
+let n2: number
+let s2: string
+```
+
+**相关约束**
+
+- 对象的属性名必须是合法的标识符
+- 不支持Symbol() API
+- 不支持通过索引访问字段
+- 不支持delete运算符
+- 不支持in运算符
+- 限制使用标准库
+
+### 部分支持`instanceof`运算符
+
+**规则：**`arkts-instanceof-ref-types`
+
+**级别：错误**
+
+在TypeScript中，`instanceof`运算符的左操作数的类型必须为`any`类型、对象类型，或者它是类型参数，否则结果为`false`。在ArkTS中，`instanceof`运算符的左操作数的类型必须为引用类型（例如，对象、数组或者函数），否则会发生编译时错误。此外，在ArkTS中，`instanceof`运算符的左操作数不能是类型，必须是对象的实例。
+
+### 不支持`in`运算符
+
+**规则：**`arkts-no-in`
+
+**级别：错误**
+
+由于在ArkTS中，对象布局在编译时是已知的并且在运行时无法修改，因此，不支持`in`运算符。如果仍需检查某些类成员是否存在，使用`instanceof`代替。
+
+**TypeScript**
+
+```typescript
+class Person {
+  name: string = ''
+}
+let p = new Person();
+
+let b = 'name' in p; // true
+```
+
+**ArkTS**
+
+```typescript
+class Person {
+  name: string = ''
+}
+let p = new Person();
+
+let b = p instanceof Person; // true，且属性name一定存在
+```
+
+**相关约束**
+
+- 对象的属性名必须是合法的标识符
+- 不支持Symbol() API
+- 不支持通过索引访问字段
+- 不支持delete运算符
+- 仅允许在表达式中使用typeof运算符
+- 限制使用标准库
+
+### 不支持解构赋值
+
+**规则：**`arkts-no-destruct-assignment`
+
+**级别：错误**
+
+ArkTS不支持解构赋值。可使用其他替代方法，例如，使用临时变量。
+
+**TypeScript**
+
+```typescript
+let [one, two] = [1, 2]; // 此处需要分号
+[one, two] = [two, one];
+
+let head, tail
+[head, ...tail] = [1, 2, 3, 4];
+```
+
+**ArkTS**
+
+```typescript
+let arr: number[] = [1, 2];
+let one = arr[0];
+let two = arr[1];
+
+let tmp = one;
+one = two;
+two = tmp;
+
+let data: Number[] = [1, 2, 3, 4];
+let head = data[0];
+let tail: Number[] = [];
+for (let i = 1; i < data.length; ++i) {
+  tail.push(data[i]);
+}
+```
+
+### 逗号运算符`,`仅用在`for`循环语句中
+
+**规则：**`arkts-no-comma-outside-loops`
+
+**级别：错误**
+
+为了方便理解执行顺序，在ArkTS中，逗号运算符仅适用于`for`循环语句中。注意与声明变量、函数参数传递时的逗号分隔符不同。
+
+**TypeScript**
+
+```typescript
+for (let i = 0, j = 0; i < 10; ++i, j += 2) {
+  // ...
+}
+
+let x = 0;
+x = (++x, x++); // 1
+```
+
+**ArkTS**
+
+```typescript
+for (let i = 0, j = 0; i < 10; ++i, j += 2) {
+  // ...
+}
+
+// 通过语句表示执行顺序，而非逗号运算符
+let x = 0;
+++x;
+x = x++;
+```
+
+### 不支持解构变量声明
+
+**规则：**`arkts-no-destruct-decls`
+
+**级别：错误**
+
+ArkTS不支持解构变量声明。它是一个依赖于结构兼容性的动态特性并且解构声明中的名称必须和被解构对象中的属性名称一致。
+
+**TypeScript**
+
+```typescript
+class Point {
+  x: number = 0.0
+  y: number = 0.0
+}
+
+function returnZeroPoint(): Point {
+  return new Point();
+}
+
+let {x, y} = returnZeroPoint();
+```
+
+**ArkTS**
+
+```typescript
+class Point {
+  x: number = 0.0
+  y: number = 0.0
+}
+
+function returnZeroPoint(): Point {
+  return new Point();
+}
+
+// 创建一个局部变量来处理每个字段
+let zp = returnZeroPoint();
+let x = zp.x;
+let y = zp.y;
+```
+
+### 不支持在catch语句标注类型
+
+**规则：**`arkts-no-types-in-catch`
+
+**级别：错误**
+
+在TypeScript的catch语句中，只能标注`any`或`unknown`类型。由于ArkTS不支持这些类型，应省略类型标注。
+
+**TypeScript**
+
+```typescript
+try {
+  // ...
+} catch (a: unknown) {
+  // 处理异常
+}
+```
+
+**ArkTS**
+
+```typescript
+try {
+  // ...
+} catch (a) {
+  // 处理异常
+}
+```
+
+**相关约束**
+
+限制throw语句中表达式的类型
+
+### 不支持`for .. in`
+
+**规则：**`arkts-no-for-in`
+
+**级别：错误**
+
+由于在ArkTS中，对象布局在编译时是确定的、并且不能在运行时被改变，所以不支持使用`for .. in`迭代一个对象的属性。对于数组来说，可以使用常规的`for`循环。
+
+**TypeScript**
+
+```typescript
+let a: string[] = ['1.0', '2.0', '3.0'];
+for (let i in a) {
+  console.log(a[i]);
+}
+```
+
+**ArkTS**
+
+```typescript
+let a: string[] = ['1.0', '2.0', '3.0'];
+for (let i = 0; i < a.length; ++i) {
+  console.log(a[i]);
+}
+```
+
+### 不支持映射类型
+
+**规则：**`arkts-no-mapped-types`
+
+**级别：错误**
+
+ArkTS不支持映射类型，使用其他语法来表示相同的语义。
+
+**TypeScript**
+
+```typescript
+type OptionsFlags<Type> = {
+  [Property in keyof Type]: boolean
+}
+```
+
+**ArkTS**
+
+```typescript
+class C {
+  n: number = 0
+  s: string = ''
+}
+
+class CFlags {
+  n: boolean = false
+  s: boolean = false
+}
+```
+
+### 不支持`with`语句
+
+**规则：**`arkts-no-with`
+
+**级别：错误**
+
+ArkTS不支持`with`语句，使用其他语法来表示相同的语义。
+
+**TypeScript**
+
+```typescript
+with (Math) { // 编译时错误, 但是仍能生成JavaScript代码
+  let r: number = 42;
+  let area: number = PI * r * r;
+}
+```
+
+**ArkTS**
+
+```typescript
+let r: number = 42;
+let area: number = Math.PI * r * r;
+```
+
+### 限制`throw`语句中表达式的类型
+
+**规则：**`arkts-limited-throw`
+
+**级别：错误**
+
+ArkTS只支持抛出`Error`类或其派生类的实例。禁止抛出其他类型（例如`number`或`string`）的数据。
+
+**TypeScript**
+
+```typescript
+throw 4;
+throw '';
+throw new Error();
+```
+
+**ArkTS**
+
+```typescript
+throw new Error();
+```
+
+### 限制省略函数返回类型标注
+
+**规则：**`arkts-no-implicit-return-types`
+
+**级别：错误**
+
+ArkTS在部分场景中支持对函数返回类型进行推断。当`return`语句中的表达式是对某个函数或方法进行调用，且该函数或方法的返回类型没有被显著标注时，会出现编译时错误。在这种情况下，请标注函数返回类型。
+
+**TypeScript**
+
+```typescript
+// 只有在开启noImplicitAny选项时会产生编译时错误
+function f(x: number) {
+  if (x <= 0) {
+    return x;
+  }
+  return g(x);
+}
+
+// 只有在开启noImplicitAny选项时会产生编译时错误
+function g(x: number) {
+  return f(x - 1);
+}
+
+function doOperation(x: number, y: number) {
+  return x + y;
+}
+
+f(10);
+doOperation(2, 3);
+```
+
+**ArkTS**
+
+```typescript
+// 需标注返回类型：
+function f(x: number): number {
+  if (x <= 0) {
+    return x;
+  }
+  return g(x);
+}
+
+// 可以省略返回类型，返回类型可以从f的类型标注推导得到
+function g(x: number): number {
+  return f(x - 1);
+}
+
+// 可以省略返回类型
+function doOperation(x: number, y: number) {
+  return x + y;
+}
+
+f(10);
+doOperation(2, 3);
+```
+
+### 不支持参数解构的函数声明
+
+**规则：**`arkts-no-destruct-params`
+
+**级别：错误**
+
+ArkTS要求实参必须直接传递给函数，且必须指定到形参。
+
+**TypeScript**
+
+```typescript
+function drawText({ text = '', location: [x, y] = [0, 0], bold = false }) {
+  text;
+  x;
+  y;
+  bold;
+}
+
+drawText({ text: 'Hello, world!', location: [100, 50], bold: true });
+```
+
+**ArkTS**
+
+```typescript
+function drawText(text: String, location: number[], bold: boolean) {
+  let x = location[0];
+  let y = location[1];
+  text;
+  x;
+  y;
+  bold;
+}
+
+function main() {
+  drawText('Hello, world!', [100, 50], true);
+}
+```
+
+### 不支持在函数内声明函数
+
+**规则：**`arkts-no-nested-funcs`
+
+**级别：错误**
+
+ArkTS不支持在函数内声明函数，改用lambda函数。
+
+**TypeScript**
+
+```typescript
+function addNum(a: number, b: number): void {
+
+  // 函数内声明函数
+  function logToConsole(message: string): void {
+    console.log(message);
+  }
+
+  let result = a + b;
+
+  // 调用函数
+  logToConsole('result is ' + result);
+}
+```
+
+**ArkTS**
+
+```typescript
+function addNum(a: number, b: number): void {
+  // 使用lambda函数代替声明函数
+  let logToConsole: (message: string) => void = (message: string): void => {
+    console.log(message);
+  }
+
+  let result = a + b;
+
+  logToConsole('result is ' + result);
+}
+```
+
+### 不支持在函数和类的静态方法中使用`this`
+
+**规则：**`arkts-no-standalone-this`
+
+**级别：错误**
+
+ArkTS不支持在函数和类的静态方法中使用`this`，只能在类的实例方法中使用`this`。
+
+**TypeScript**
+
+```typescript
+function foo(i: string) {
+  this.count = i; // 只有在开启noImplicitThis选项时会产生编译时错误
+}
+
+class A {
+  count: string = 'a'
+  m = foo
+}
+
+let a = new A();
+console.log(a.count); // 打印a
+a.m('b');
+console.log(a.count); // 打印b
+```
+
+**ArkTS**
+
+```typescript
+class A {
+  count: string = 'a'
+  m(i: string): void {
+    this.count = i;
+  }
+}
+
+function main(): void {
+  let a = new A();
+  console.log(a.count);  // 打印a
+  a.m('b');
+  console.log(a.count);  // 打印b
+}
+```
+
+**相关约束**
+
+不支持Function.apply、Function.bind以及Function.call
+
+### 不支持生成器函数
+
+**规则：**`arkts-no-generators`
+
+**级别：错误**
+
+目前ArkTS不支持生成器函数，使用`async`或`await`机制进行并行任务处理。
+
+**TypeScript**
+
+```typescript
+function* counter(start: number, end: number) {
+  for (let i = start; i <= end; i++) {
+    yield i;
+  }
+}
+
+for (let num of counter(1, 5)) {
+  console.log(num);
+}
+```
+
+**ArkTS**
+
+```typescript
+async function complexNumberProcessing(str: string): Promise<string> {
+  // ...
+  return str;
+}
+
+async function foo() {
+  for (let i = 1; i <= 5; i++) {
+    console.log(await complexNumberProcessing(i));
+  }
+}
+
+foo()
+```
+
+### 使用`instanceof`和`as`进行类型保护
+
+**规则：**`arkts-no-is`
+
+**级别：错误**
+
+ArkTS不支持`is`运算符，必须用`instanceof`运算符替代。在使用之前，必须使用`as`运算符将对象转换为需要的类型。
+
+**TypeScript**
+
+```typescript
+class Foo {
+  foo: string = ''
+  common: string = ''
+}
+
+class Bar {
+  bar: string = ''
+  common: string = ''
+}
+
+function isFoo(arg: any): arg is Foo {
+  return arg.foo !== undefined;
+}
+
+function doStuff(arg: Foo | Bar) {
+  if (isFoo(arg)) {
+    console.log(arg.foo);  // OK
+    console.log(arg.bar);  // 编译时错误
   } else {
-    console.log('Hello ' + friendName);
+    console.log(arg.foo);  // 编译时错误
+    console.log(arg.bar);  // OK
   }
-})();
+}
+
+doStuff({ foo: 123, common: '123' });
+doStuff({ bar: 123, common: '123' });
 ```
 
-输出结果：Goodbye Jack
+**ArkTS**
 
-我们知道，在 JavaScript中， Function 和 var 都会被提升（变量提升），所以上面的代码就相当于：
+```typescript
+class Foo {
+  foo: string = ''
+  common: string = ''
+}
 
-```javascript
-var name = 'World!';
-(function () {
-    var name;
-    if (typeof name === 'undefined') {
-        name = 'Jack';
-        console.log('Goodbye ' + name);
-    } else {
-        console.log('Hello ' + name);
-    }
-})();
+class Bar {
+  bar: string = ''
+  common: string = ''
+}
+
+function isFoo(arg: Object): boolean {
+  return arg instanceof Foo;
+}
+
+function doStuff(arg: Object): void {
+  if (isFoo(arg)) {
+    let fooArg = arg as Foo;
+    console.log(fooArg.foo);   // OK
+    console.log(arg.bar);    // 编译时错误
+  } else {
+    let barArg = arg as Bar;
+    console.log(arg.foo);    // 编译时错误
+    console.log(barArg.bar);   // OK
+  }
+}
+
+function main(): void {
+  doStuff(new Foo());
+  doStuff(new Bar());
+}
 ```
 
-这样，答案就一目了然了。
+### 部分支持展开运算符
 
-### 4. 代码输出结果
+**规则：**`arkts-no-spread`
 
-```javascript
-function fn1(){
-  console.log('fn1')
+**级别：错误**
+
+ArkTS仅支持使用展开运算符展开数组、`Array`的子类和`TypedArray`（例如`Int32Array`）。仅支持使用在以下场景中：
+
+1. 传递给剩余参数时
+2. 复制一个数组到数组字面量
+
+**TypeScript**
+
+```typescript
+function foo(x: number, y: number, z: number) {
+  // ...
 }
-var fn2
- 
-fn1()
-fn2()
- 
-fn2 = function() {
-  console.log('fn2')
-}
- 
-fn2()
+
+let args: [number, number, number] = [0, 1, 2];
+foo(...args);
 ```
 
-输出结果：
+**ArkTS**
 
-```javascript
-fn1
-Uncaught TypeError: fn2 is not a function
-fn2
+```typescript
+function log_numbers(x: number, y: number, z: number) {
+  // ...
+}
+
+let numbers: number[] = [1, 2, 3];
+log_numbers(numbers[0], numbers[1], numbers[2]);
 ```
 
-这里也是在考察变量提升，关键在于第一个fn2()，这时fn2仍是一个undefined的变量，所以会报错fn2不是一个函数。
+**TypeScript**
 
-### 5. 代码输出结果
-
-```javascript
-function a() {
-    var temp = 10;
-    function b() {
-        console.log(temp); // 10
-    }
-    b();
-}
-a();
-
-function a() {
-    var temp = 10;
-    b();
-}
-function b() {
-    console.log(temp); // 报错 Uncaught ReferenceError: temp is not defined
-}
-a();
+```typescript
+let point2d = { x: 1, y: 2 };
+let point3d = { ...point2d, z: 3 };
 ```
 
-在上面的两段代码中，第一段是可以正常输出，这个应该没啥问题，关键在于第二段代码，它会报错Uncaught ReferenceError: temp is not defined。这时因为在b方法执行时，temp 的值为undefined。
+**ArkTS**
 
-### 6. 代码输出结果
+```typescript
+class Point2D {
+  x: number = 0; y: number = 0
+}
 
-```javascript
- var a=3;
- function c(){
-    alert(a);
- }
- (function(){
-  var a=4;
-  c();
- })();
+class Point3D {
+  x: number = 0; y: number = 0; z: number = 0
+  constructor(p2d: Point2D, z: number) {
+    this.x = p2d.x;
+    this.y = p2d.y;
+    this.z = z;
+  }
+}
+
+let p3d = new Point3D({ x: 1, y: 2 } as Point2D, 3);
+
+class DerivedFromArray extends Uint16Array {};
+
+let arr1 = [1, 2, 3];
+let arr2 = new Uint16Array([4, 5, 6]);
+let arr3 = new DerivedFromArray([7, 8, 9]);
+let arr4 = [...arr1, 10, ...arr2, 11, ...arr3];
 ```
 
-js中变量的作用域链与定义时的环境有关，与执行时无关。执行环境只会改变this、传递的参数、全局变量等
+### 接口不能继承具有相同方法的两个接口
 
-### 7.  代码输出问题
+**规则：**`arkts-no-extend-same-prop`
 
-```javascript
-function fun(n, o) {
-  console.log(o)
-  return {
-    fun: function(m){
-      return fun(m, n);
-    }
-  };
+**级别：错误**
+
+在TypeScript中，如果一个接口继承了具有相同方法的两个接口，则该接口必须使用联合类型来声明该方法的返回值类型。在ArkTS中，由于一个接口中不能包含两个无法区分的方法（例如两个参数列表相同但返回类型不同的方法），因此，接口不能继承具有相同方法的两个接口。
+
+**TypeScript**
+
+```typescript
+interface Mover {
+  getStatus(): { speed: number }
 }
-var a = fun(0);  a.fun(1);  a.fun(2);  a.fun(3);
-var b = fun(0).fun(1).fun(2).fun(3);
-var c = fun(0).fun(1);  c.fun(2);  c.fun(3);
+interface Shaker {
+  getStatus(): { frequency: number }
+}
+
+interface MoverShaker extends Mover, Shaker {
+  getStatus(): {
+    speed: number
+    frequency: number
+  }
+}
+
+class C implements MoverShaker {
+  private speed: number = 0
+  private frequency: number = 0
+
+  getStatus() {
+    return { speed: this.speed, frequency: this.frequency };
+  }
+}
 ```
 
-输出结果：
+**ArkTS**
 
-```javascript
-undefined  0  0  0
-undefined  0  1  2
-undefined  0  1  1
+```typescript
+class MoveStatus {
+  public speed: number
+  constructor() {
+    this.speed = 0;
+  }
+}
+interface Mover {
+  getMoveStatus(): MoveStatus
+}
+
+class ShakeStatus {
+  public frequency: number
+  constructor() {
+    this.frequency = 0;
+  }
+}
+interface Shaker {
+  getShakeStatus(): ShakeStatus
+}
+
+class MoveAndShakeStatus {
+  public speed: number
+  public frequency: number
+  constructor() {
+    this.speed = 0;
+    this.frequency = 0;
+  }
+}
+
+class C implements Mover, Shaker {
+  private move_status: MoveStatus
+  private shake_status: ShakeStatus
+
+  constructor() {
+    this.move_status = new MoveStatus();
+    this.shake_status = new ShakeStatus();
+  }
+
+  public getMoveStatus(): MoveStatus {
+    return this.move_status;
+  }
+
+  public getShakeStatus(): ShakeStatus {
+    return this.shake_status;
+  }
+
+  public getStatus(): MoveAndShakeStatus {
+    return {
+      speed: this.move_status.speed,
+      frequency: this.shake_status.frequency
+    };
+  }
+}
 ```
 
-这是一道关于闭包的题目，对于fun方法，调用之后返回的是一个对象。我们知道，当调用函数的时候传入的实参比函数声明时指定的形参个数要少，剩下的形参都将设置为undefined值。所以 `console.log(o);` 会输出undefined。而a就是是fun(0)返回的那个对象。也就是说，函数fun中参数 n 的值是0，而返回的那个对象中，需要一个参数n，而这个对象的作用域中没有n，它就继续沿着作用域向上一级的作用域中寻找n，最后在函数fun中找到了n，n的值是0。了解了这一点，其他运算就很简单了，以此类推。
+### 不支持声明合并
 
-### 8. 代码输出结果
+**规则：**`arkts-no-decl-merging`
 
-```javascript
-f = function() {return true;};   
-g = function() {return false;};   
-(function() {   
-   if (g() && [] == ![]) {   
-      f = function f() {return false;};   
-      function g() {return true;}   
-   }   
-})();   
-console.log(f());
+**级别：错误**
+
+ArkTS不支持类、接口的声明合并。
+
+**TypeScript**
+
+```typescript
+interface Document {
+  createElement(tagName: any): Element
+}
+
+interface Document {
+  createElement(tagName: string): HTMLElement
+}
+
+interface Document {
+  createElement(tagName: number): HTMLDivElement
+  createElement(tagName: boolean): HTMLSpanElement
+  createElement(tagName: string, value: number): HTMLCanvasElement
+}
 ```
 
-输出结果： false
+**ArkTS**
 
-这里首先定义了两个变量f和g，我们知道变量是可以重新赋值的。后面是一个匿名自执行函数，在 if 条件中调用了函数 g()，由于在匿名函数中，又重新定义了函数g，就覆盖了外部定义的变量g，所以，这里调用的是内部函数 g 方法，返回为 true。第一个条件通过，进入第二个条件。
-
-第二个条件是[] == ![]，先看 ![] ，在 JavaScript 中，当用于布尔运算时，比如在这里，对象的非空引用被视为 true，空引用 null 则被视为 false。由于这里不是一个 null, 而是一个没有元素的数组，所以 [] 被视为 true, 而 ![] 的结果就是 false 了。当一个布尔值参与到条件运算的时候，true 会被看作 1, 而 false 会被看作 0。现在条件变成了 [] == 0 的问题了，当一个对象参与条件比较的时候，它会被求值，求值的结果是数组成为一个字符串，[] 的结果就是 '' ，而 '' 会被当作 0 ，所以，条件成立。
-
-两个条件都成立，所以会执行条件中的代码， f 在定义是没有使用var，所以他是一个全局变量。因此，这里会通过闭包访问到外部的变量 f, 重新赋值，现在执行 f 函数返回值已经成为 false 了。而 g 则不会有这个问题，这里是一个函数内定义的 g，不会影响到外部的 g 函数。所以最后的结果就是 false。
-
-
-
-### 1. 代码输出结果
-
-```javascript
-function Person(name) {
-    this.name = name
+```typescript
+interface Document {
+  createElement(tagName: number): HTMLDivElement
+  createElement(tagName: boolean): HTMLSpanElement
+  createElement(tagName: string, value: number): HTMLCanvasElement
+  createElement(tagName: string): HTMLElement
+  createElement(tagName: Object): Element
 }
-var p2 = new Person('king');
-console.log(p2.__proto__) //Person.prototype
-console.log(p2.__proto__.__proto__) //Object.prototype
-console.log(p2.__proto__.__proto__.__proto__) // null
-console.log(p2.__proto__.__proto__.__proto__.__proto__)//null后面没有了，报错
-console.log(p2.__proto__.__proto__.__proto__.__proto__.__proto__)//null后面没有了，报错
-console.log(p2.constructor)//Person
-console.log(p2.prototype)//undefined p2是实例，没有prototype属性
-console.log(Person.constructor)//Function 一个空函数
-console.log(Person.prototype)//打印出Person.prototype这个对象里所有的方法和属性
-console.log(Person.prototype.constructor)//Person
-console.log(Person.prototype.__proto__)// Object.prototype
-console.log(Person.__proto__) //Function.prototype
-console.log(Function.prototype.__proto__)//Object.prototype
-console.log(Function.__proto__)//Function.prototype
-console.log(Object.__proto__)//Function.prototype
-console.log(Object.prototype.__proto__)//null
 ```
 
-这道义题目考察原型、原型链的基础，记住就可以了。
+### 接口不能继承类
 
-### 2. 代码输出结果
+**规则：**`arkts-extends-only-class`
 
-```javascript
-// a
-function Foo () {
- getName = function () {
-   console.log(1);
- }
- return this;
-}
-// b
-Foo.getName = function () {
- console.log(2);
-}
-// c
-Foo.prototype.getName = function () {
- console.log(3);
-}
-// d
-var getName = function () {
- console.log(4);
-}
-// e
-function getName () {
- console.log(5);
+**级别：错误**
+
+ArkTS不支持接口继承类，接口只能继承接口。
+
+**TypeScript**
+
+```typescript
+class Control {
+  state: number = 0
 }
 
-Foo.getName();           // 2
-getName();               // 4
-Foo().getName();         // 1
-getName();               // 1 
-new Foo.getName();       // 2
-new Foo().getName();     // 3
-new new Foo().getName(); // 3
+interface SelectableControl extends Control {
+  select(): void
+}
 ```
 
-输出结果：2  4  1  1  2  3  3
+**ArkTS**
 
-**解析：**
-
-1. **Foo.getName()，** Foo为一个函数对象，对象都可以有属性，b 处定义Foo的getName属性为函数，输出2；
-2. **getName()，** 这里看d、e处，d为函数表达式，e为函数声明，两者区别在于变量提升，函数声明的 5 会被后边函数表达式的 4 覆盖；
-3. **Foo().getName()，** 这里要看a处，在Foo内部将全局的getName重新赋值为 console.log(1) 的函数，执行Foo()返回 this，这个this指向window，Foo().getName() 即为window.getName()，输出 1；
-4. **getName()，** 上面3中，全局的getName已经被重新赋值，所以这里依然输出 1；
-5. **new Foo.getName()，** 这里等价于 new (Foo.getName())，先执行 Foo.getName()，输出 2，然后new一个实例；
-6. **new Foo().getName()，** 这里等价于 (new Foo()).getName(), 先new一个Foo的实例，再执行这个实例的getName方法，但是这个实例本身没有这个方法，所以去原型链__protot__上边找，实例.**protot** === Foo.prototype，所以输出 3；
-7. **new new Foo().getName()，** 这里等价于new (new Foo().getName())，如上述6，先输出 3，然后new 一个 new Foo().getName() 的实例。
-
-### 3. 代码输出结果
-
-```javascript
-var F = function() {};
-Object.prototype.a = function() {
-  console.log('a');
-};
-Function.prototype.b = function() {
-  console.log('b');
+```typescript
+interface Control {
+  state: number
 }
-var f = new F();
-f.a();
-f.b();
-F.a();
-F.b()
+
+interface SelectableControl extends Control {
+  select(): void
+}
 ```
 
-输出结果：
+### 不支持构造函数类型
 
-```javascript
-a
-Uncaught TypeError: f.b is not a function
-a
-b
+**规则：**`arkts-no-ctor-signatures-funcs`
+
+**级别：错误**
+
+ArkTS不支持使用构造函数类型，改用lambda函数。
+
+**TypeScript**
+
+```typescript
+class Person {
+  constructor(
+    name: string,
+    age: number
+  ) {}
+}
+type PersonCtor = new (name: string, age: number) => Person
+
+function createPerson(Ctor: PersonCtor, name: string, age: number): Person
+{
+  return new Ctor(name, age);
+}
+
+const person = createPerson(Person, 'John', 30);
 ```
 
-**解析：**
+**ArkTS**
 
-1. f 并不是 Function 的实例，因为它本来就不是构造函数，调用的是 Function 原型链上的相关属性和方法，只能访问到 Object 原型链。所以 f.a() 输出 a ，而 f.b() 就报错了。
-2. F 是个构造函数，而 F 是构造函数 Function 的一个实例。因为 F instanceof Object === true，F instanceof Function === true，由此可以得出结论：F 是 Object 和 Function 两个的实例，即 F 能访问到 a， 也能访问到 b。所以 F.a() 输出 a ，F.b() 输出 b。
+```typescript
+class Person {
+  constructor(
+    name: string,
+    age: number
+  ) {}
+}
+type PersonCtor = (n: string, a: number) => Person
 
-### 4. 代码输出结果
-
-```javascript
-function Foo(){
-    Foo.a = function(){
-        console.log(1);
-    }
-    this.a = function(){
-        console.log(2)
-    }
+function createPerson(Ctor: PersonCtor, n: string, a: number): Person {
+  return Ctor(n, a);
 }
 
-Foo.prototype.a = function(){
-    console.log(3);
+let Impersonizer: PersonCtor = (n: string, a: number): Person => {
+  return new Person(n, a);
 }
 
-Foo.a = function(){
-    console.log(4);
-}
-
-Foo.a();
-let obj = new Foo();
-obj.a();
-Foo.a();
+const person = createPerson(Impersonizer, 'John', 30);
 ```
 
-输出结果：4 2 1
+### 只能使用类型相同的编译时表达式初始化枚举成员
 
-**解析：**
+**规则：**`arkts-no-enum-mixed-types`
 
-1. Foo.a() 这个是调用 Foo 函数的静态方法 a，虽然 Foo 中有优先级更高的属性方法 a，但 Foo 此时没有被调用，所以此时输出 Foo 的静态方法 a 的结果：4
-2. let obj = new Foo(); 使用了 new 方法调用了函数，返回了函数实例对象，此时 Foo 函数内部的属性方法初始化，原型链建立。
-3. obj.a() ; 调用 obj 实例上的方法 a，该实例上目前有两个 a 方法：一个是内部属性方法，另一个是原型上的方法。当这两者都存在时，首先查找 ownProperty ，如果没有才去原型链上找，所以调用实例上的 a 输出：2
-4. Foo.a() ; 根据第2步可知 Foo 函数内部的属性方法已初始化，覆盖了同名的静态方法，所以输出：1
+**级别：错误**
 
-### 5. 代码输出结果
+ArkTS不支持使用在运行期间才能计算的表达式来初始化枚举成员。此外，枚举中所有显式初始化的成员必须具有相同的类型。
 
-```javascript
-function Dog() {
-  this.name = 'puppy'
+**TypeScript**
+
+```typescript
+enum E1 {
+  A = 0xa,
+  B = 0xb,
+  C = Math.random(),
+  D = 0xd,
+  E // 推断出0xe
 }
-Dog.prototype.bark = () => {
-  console.log('woof!woof!')
+
+enum E2 {
+  A = 0xa,
+  B = '0xb',
+  C = 0xc,
+  D = '0xd'
 }
-const dog = new Dog()
-console.log(Dog.prototype.constructor === Dog && dog.constructor === Dog && dog instanceof Dog)
 ```
 
-输出结果：true
+**ArkTS**
 
-**解析：**
+```typescript
+enum E1 {
+  A = 0xa,
+  B = 0xb,
+  C = 0xc,
+  D = 0xd,
+  E // 推断出0xe
+}
 
-因为constructor是prototype上的属性，所以dog.constructor实际上就是指向Dog.prototype.constructor；constructor属性指向构造函数。instanceof而实际检测的是类型是否在实例的原型链上。
-
-constructor是prototype上的属性，这一点很容易被忽略掉。constructor和instanceof 的作用是不同的，感性地来说，constructor的限制比较严格，它只能严格对比对象的构造函数是不是指定的值；而instanceof比较松散，只要检测的类型在原型链上，就会返回true。
-
-### 6. 代码输出结果
-
-```javascript
-var A = {n: 4399};
-var B =  function(){this.n = 9999};
-var C =  function(){var n = 8888};
-B.prototype = A;
-C.prototype = A;
-var b = new B();
-var c = new C();
-A.n++
-console.log(b.n);
-console.log(c.n);
+enum E2 {
+  A = '0xa',
+  B = '0xb',
+  C = '0xc',
+  D = '0xd'
+}
 ```
 
-输出结果：9999  4400
+### 不支持`enum`声明合并
 
-**解析：**
+**规则：**`arkts-no-enum-merging`
 
-1. console.log(b.n)，在查找b.n是首先查找 b 对象自身有没有 n 属性，如果没有会去原型（prototype）上查找，当执行var b = new B()时，函数内部this.n=9999(此时this指向 b) 返回b对象，b对象有自身的n属性，所以返回 9999。
-2. console.log(c.n)，同理，当执行var c = new C()时，c对象没有自身的n属性，向上查找，找到原型 （prototype）上的 n 属性，因为 A.n++(此时对象A中的n为4400)， 所以返回4400。
+**级别：错误**
 
-### 7. 代码输出问题
+ArkTS不支持`enum`声明合并。
 
-```javascript
-function A(){
+**TypeScript**
+
+```typescript
+enum ColorSet {
+  RED,
+  GREEN
 }
-function B(a){
-　　this.a = a;
+enum ColorSet {
+  YELLOW = 2
 }
-function C(a){
-　　if(a){
-this.a = a;
-　　}
+enum ColorSet {
+  BLACK = 3,
+  BLUE
 }
-A.prototype.a = 1;
-B.prototype.a = 1;
-C.prototype.a = 1;
- 
-console.log(new A().a);
-console.log(new B().a);
-console.log(new C(2).a);
 ```
 
-输出结果：1  undefined  2
+**ArkTS**
 
-**解析：**
-
-1. console.log(new A().a)，new A()为构造函数创建的对象，本身没有a属性，所以向它的原型去找，发现原型的a属性的属性值为1，故该输出值为1；
-2. console.log(new B().a)，ew B()为构造函数创建的对象，该构造函数有参数a，但该对象没有传参，故该输出值为undefined;
-3. console.log(new C(2).a)，new C()为构造函数创建的对象，该构造函数有参数a，且传的实参为2，执行函数内部，发现if为真，执行this.a = 2,故属性a的值为2。
-
-### 8 代码输出问题
-
-```javascript
-function Parent() {
-    this.a = 1;
-    this.b = [1, 2, this.a];
-    this.c = { demo: 5 };
-    this.show = function () {
-        console.log(this.a , this.b , this.c.demo );
-    }
+```typescript
+enum ColorSet {
+  RED,
+  GREEN,
+  YELLOW,
+  BLACK,
+  BLUE
 }
-
-function Child() {
-    this.a = 2;
-    this.change = function () {
-        this.b.push(this.a);
-        this.a = this.b.length;
-        this.c.demo = this.a++;
-    }
-}
-
-Child.prototype = new Parent();
-var parent = new Parent();
-var child1 = new Child();
-var child2 = new Child();
-child1.a = 11;
-child2.a = 12;
-parent.show();
-child1.show();
-child2.show();
-child1.change();
-child2.change();
-parent.show();
-child1.show();
-child2.show();
 ```
 
-输出结果：
+### 命名空间不能被用作对象
 
-```javascript
-parent.show(); // 1  [1,2,1] 5
+**规则：**`arkts-no-ns-as-obj`
 
-child1.show(); // 11 [1,2,1] 5
-child2.show(); // 12 [1,2,1] 5
+**级别：错误**
 
-parent.show(); // 1 [1,2,1] 5
+ArkTS不支持将命名空间用作对象，可以使用类或模块。
 
-child1.show(); // 5 [1,2,1,11,12] 5
+**TypeScript**
 
-child2.show(); // 6 [1,2,1,11,12] 5
-```
-
-这道题目值得神帝，他涉及到的知识点很多，例如**this的指向、原型、原型链、类的继承、数据类型**等。
-
-**解析****：** 
-
-1. parent.show()，可以直接获得所需的值，没啥好说的；
-2. child1.show()，`Child`的构造函数原本是指向`Child`的，题目显式将`Child`类的原型对象指向了`Parent`类的一个实例，需要注意`Child.prototype`指向的是`Parent`的实例`parent`，而不是指向`Parent`这个类。
-3. child2.show()，这个也没啥好说的；
-4. parent.show()，`parent`是一个`Parent`类的实例，`Child.prorotype`指向的是`Parent`类的另一个实例，两者在堆内存中互不影响，所以上述操作不影响`parent`实例，所以输出结果不变；
-5. child1.show()，`child1`执行了`change()`方法后，发生了怎样的变化呢?
-- **this.b.push(this.a)，****由于this的动态指向特性，this.b会指向****`Child.prototype`****上的****b**数组,this.a会指向`child1`的**a**属性,所以`Child.prototype.b`变成了 **[1,2,1,11]**;
-- **this.a = this.b.length，****这条语句中****`this.a`****和****`this.b`****的指向与上一句一致，故结果为****`child1.a`****变为****4**;
-- **this.c.demo = this.a++，****由于****`child1`****自身属性并没有****c**这个属性，所以此处的`this.c`会指向`Child.prototype.c`，`this.a`值为**4**，为原始类型，故赋值操作时会直接赋值，`Child.prototype.c.demo`的结果为**4**，而`this.a`随后自增为**5(4 + 1 = 5)。**
-1. `child2`执行了`change()`方法, 而`child2`和`child1`均是`Child`类的实例，所以他们的原型链指向同一个原型对象`Child.prototype`,也就是同一个`parent`实例，所以`child2.change()`中所有影响到原型对象的语句都会影响`child1`的最终输出结果。
-- **this.b.push(this.a)，****由于this的动态指向特性，this.b会指向****`Child.prototype`****上的****b**数组,this.a会指向`child2`的**a**属性,所以`Child.prototype.b`变成了 **[1,2,1,11,12]**;
-- **this.a = this.b.length，****这条语句中****`this.a`****和****`this.b`****的指向与上一句一致，故结果为****`child2.a`****变为****5**;
-- **this.c.demo = this.a++，****由于****`child2`****自身属性并没有****c**这个属性，所以此处的`this.c`会指向`Child.prototype.c`，故执行结果为`Child.prototype.c.demo`的值变为`child2.a`的值**5**，而`child2.a`最终自增为**6(5 + 1 = 6)。**
-
-### 9. 代码输出结果
-
-```javascript
-function SuperType(){
-    this.property = true;
+```typescript
+namespace MyNamespace {
+  export let x: number
 }
 
-SuperType.prototype.getSuperValue = function(){
-    return this.property;
-};
-
-function SubType(){
-    this.subproperty = false;
-}
-
-SubType.prototype = new SuperType();
-SubType.prototype.getSubValue = function (){
-    return this.subproperty;
-};
-
-var instance = new SubType();
-console.log(instance.getSuperValue());
+let m = MyNamespace;
+m.x = 2;
 ```
 
-输出结果：true
+**ArkTS**
 
-实际上，这段代码就是在实现原型链继承，SubType继承了SuperType，本质是重写了SubType的原型对象，代之以一个新类型的实例。SubType的原型被重写了，所以instance.constructor指向的是SuperType。具体如下：
+```typescript
+namespace MyNamespace {
+  export let x: number
+}
+
+MyNamespace.x = 2;
+```
+
+### 不支持命名空间中的非声明语句
+
+**规则：**`arkts-no-ns-statements`
+
+**级别：错误**
+
+在ArkTS中，命名空间用于定义标志符可见范围，只在编译时有效。因此，不支持命名空间中的非声明语句。可以将非声明语句写在函数中。
+
+**TypeScript**
+
+```typescript
+namespace A {
+  export let x: number
+  x = 1;
+}
+```
+
+**ArkTS**
+
+```typescript
+namespace A {
+  export let x: number
+
+  export function init() {
+    x = 1;
+  }
+}
+
+// 调用初始化函数来执行
+A.init();
+```
+
+### 不支持`require`和`import`赋值表达式
+
+**规则：**`arkts-no-require`
+
+**级别：错误**
+
+ArkTS不支持通过`require`导入，也不支持`import`赋值表达式，改用`import`。
+
+**TypeScript**
+
+```typescript
+import m = require('mod')
+```
+
+**ArkTS**
+
+```typescript
+import * as m from 'mod'
+```
+
+**相关约束**
+
+不支持export = ...语法
+
+### 不支持`export = ...`语法
+
+**规则：**`arkts-no-export-assignment`
+
+**级别：错误**
+
+ArkTS不支持`export = ...`语法，改用常规的`export`或`import`。
+
+**TypeScript**
+
+```typescript
+// module1
+export = Point
+
+class Point {
+  constructor(x: number, y: number) {}
+  static origin = new Point(0, 0)
+}
+
+// module2
+import Pt = require('module1')
+
+let p = Pt.Point.origin;
+```
+
+**ArkTS**
+
+```typescript
+// module1
+export class Point {
+  constructor(x: number, y: number) {}
+  static origin = new Point(0, 0)
+}
+
+// module2
+import * as Pt from 'module1'
+
+let p = Pt.Point.origin
+```
+
+**相关约束**
+
+不支持require和import赋值表达式
+
+### 不支持ambient module声明
+
+**规则：**`arkts-no-ambient-decls`
+
+**级别：错误**
+
+由于ArkTS本身有与JavaScript交互的机制，ArkTS不支持ambient module声明。
+
+**TypeScript**
+
+```typescript
+declare module 'someModule' {
+  export function normalize(s: string): string;
+}
+```
+
+**ArkTS**
+
+```typescript
+// 从原始模块中导入需要的内容
+import { normalize } from 'someModule'
+```
+
+**相关约束**
+
+不支持在模块名中使用通配符
+
+### 不支持在模块名中使用通配符
+
+**规则：**`arkts-no-module-wildcards`
+
+**级别：错误**
+
+由于在ArkTS中，导入是编译时而非运行时行为，因此，不支持在模块名中使用通配符。
+
+**TypeScript**
+
+```typescript
+// 声明
+declare module '*!text' {
+  const content: string
+  export default content
+}
+
+// 使用代码
+import fileContent from 'some.txt!text'
+```
+
+**ArkTS**
+
+```typescript
+// 声明
+declare namespace N {
+  function foo(x: number): number
+}
+
+// 使用代码
+import * as m from 'module'
+console.log('N.foo called: ' + N.foo(42));
+```
+
+**相关约束**
+
+- 不支持ambient module声明
+- 不支持通用模块定义(UMD)
+
+### 不支持通用模块定义(UMD)
+
+**规则：**`arkts-no-umd`
+
+**级别：错误**
+
+ArkTS不支持通用模块定义（UMD）。因为在ArkTS中没有“脚本”的概念（相对于“模块”）。此外，在ArkTS中，导入是编译时而非运行时特性。改用`export`和`import`语法。
+
+**TypeScript**
+
+```typescript
+// math-lib.d.ts
+export const isPrime(x: number): boolean
+export as namespace mathLib
+
+// 脚本中
+mathLib.isPrime(2)
+```
+
+**ArkTS**
+
+```typescript
+// math-lib.d.ts
+namespace mathLib {
+  export isPrime(x: number): boolean
+}
+
+// 程序中
+import { mathLib } from 'math-lib'
+mathLib.isPrime(2)
+```
+
+**相关约束**
+
+不支持在模块名中使用通配符
+
+### 不支持`new.target`
+
+**规则：**`arkts-no-new-target`
+
+**级别：错误**
+
+ArkTS没有原型的概念，因此不支持`new.target`。此特性不符合静态类型的原则。
+
+**相关约束**
+
+不支持在原型上赋值
+
+### 不支持确定赋值断言
+
+**规则：**`arkts-no-definite-assignment`
+
+**级别：警告**
+
+ArkTS不支持确定赋值断言，例如：`let v!: T`。改为在声明变量的同时为变量赋值。
+
+**TypeScript**
+
+```typescript
+let x!: number // 提示：在使用前将x初始化
+
+initialize();
+
+function initialize() {
+  x = 10;
+}
+
+console.log('x = ' + x);
+```
+
+**ArkTS**
+
+```typescript
+function initialize(): number {
+  return 10;
+}
+
+let x: number = initialize();
+
+console.log('x = ' + x);
+```
+
+### 不支持在原型上赋值
+
+**规则：**`arkts-no-prototype-assignment`
+
+**级别：错误**
+
+ArkTS没有原型的概念，因此不支持在原型上赋值。此特性不符合静态类型的原则。
+
+**TypeScript**
+
+```typescript
+let C = function(p) {
+  this.p = p; // 只有在开启noImplicitThis选项时会产生编译时错误
+}
+
+C.prototype = {
+  m() {
+    console.log(this.p);
+  }
+}
+
+C.prototype.q = function(r: string) {
+  return this.p == r;
+}
+```
+
+**ArkTS**
+
+```typescript
+class C {
+  p: string = ''
+  m() {
+    console.log(this.p);
+  }
+  q(r: string) {
+    return this.p == r;
+  }
+}
+```
+
+**相关约束**
+
+不支持new.target
+
+### 不支持`globalThis`
+
+**规则：**`arkts-no-globalthis`
+
+**级别：警告**
+
+由于ArkTS不支持动态更改对象的布局，因此不支持全局作用域和`globalThis`。
+
+**TypeScript**
+
+```typescript
+// 全局文件中
+var abc = 100;
+
+// 从上面引用'abc'
+let x = globalThis.abc;
+```
+
+**ArkTS**
+
+```typescript
+// file1
+export let abc: number = 100;
+
+// file2
+import * as M from 'file1'
+
+let x = M.abc;
+```
+
+**相关约束**
+
+- 不支持声明函数的属性
+- 标准库使用限制
+
+### 不支持一些utility类型
+
+**规则：**`arkts-no-utility-types`
+
+**级别：错误**
+
+ArkTS仅支持`Partial`、`Required`、`Readonly`和`Record`，不支持TypeScript中其他的`Utility Types`。
+
+对于`Record`类型的对象，通过索引访问到的值的类型是包含`undefined`的联合类型。
+
+### 不支持对函数声明属性
+
+**规则：**`arkts-no-func-props`
+
+**级别：错误**
+
+由于ArkTS不支持动态改变函数对象布局，因此，不支持对函数声明属性。
+
+**相关约束**
+
+不支持globalThis
+
+### 不支持`Function.apply`和`Function.call`
+
+**规则：**`arkts-no-func-apply-call`
+
+**级别：错误**
+
+ArkTS不允许使用标准库函数`Function.apply`和`Function.call`。标准库使用这些函数来显式设置被调用函数的`this`参数。在ArkTS中，`this`的语义仅限于传统的OOP风格，函数体中禁止使用`this`。
+
+**相关约束**
+
+不支持在函数中使用this
+
+### 不支持`Function.bind`
+
+**规则：**`arkts-no-func-bind`
+
+**级别：警告**
+
+ArkTS不允许使用标准库函数`Function.bind`。标准库使用这些函数来显式设置被调用函数的`this`参数。在ArkTS中，`this`的语义仅限于传统的OOP风格，函数体中禁止使用`this`。
+
+**相关约束**
+
+不支持在函数中使用this
+
+### 不支持`as const`断言
+
+**规则：**`arkts-no-as-const`
+
+**级别：错误**
+
+ArkTS不支持`as const`断言。在标准TypeScript中，`as const`用于标注字面量的相应字面量类型，而ArkTS不支持字面量类型。
+
+**TypeScript**
+
+```typescript
+// 'hello'类型
+let x = 'hello' as const;
+
+// 'readonly [10, 20]'类型
+let y = [10, 20] as const;
+
+// '{ readonly text: 'hello' }'类型
+let z = { text: 'hello' } as const;
+```
+
+**ArkTS**
+
+```typescript
+// 'string'类型
+let x: string = 'hello';
+
+// 'number[]'类型
+let y: number[] = [10, 20];
+
+class Label {
+  text: string = ''
+}
+
+// 'Label'类型
+let z: Label = {
+  text: 'hello'
+}
+```
+
+### 不支持导入断言
+
+**规则：**`arkts-no-import-assertions`
+
+**级别：错误**
+
+由于在ArkTS中，导入是编译时而非运行时特性，因此，ArkTS不支持导入断言。在运行时检查导入的API是否正确，对于静态类型的语言来说是没有意义的。改用常规的`import`语法。
+
+**TypeScript**
+
+```typescript
+import { obj } from 'something.json' assert { type: 'json' }
+```
+
+**ArkTS**
+
+```typescript
+// 编译时将检查导入T的正确性
+import { something } from 'module'
+```
+
+**相关约束**
+
+- 不支持在模块名中使用通配符
+- 不支持通用模块定义(UMD)
+- 不支持运行时导入断言
+
+### 限制使用标准库
+
+**规则：**`arkts-limited-stdlib`
+
+**级别：错误**
+
+ArkTS不允许使用TypeScript或JavaScript标准库中的某些接口。大部分接口与动态特性有关。ArkTS中禁止使用以下接口：
+
+全局对象的属性和方法：`eval`
+
+`Object`：`__proto__`、`__defineGetter__`、`__defineSetter__`、
+`__lookupGetter__`、`__lookupSetter__`、`assign`、`create`、
+`defineProperties`、`defineProperty`、`freeze`、
+`fromEntries`、`getOwnPropertyDescriptor`、`getOwnPropertyDescriptors`、
+`getOwnPropertySymbols`、`getPrototypeOf`、
+`hasOwnProperty`、`is`、`isExtensible`、`isFrozen`、
+`isPrototypeOf`、`isSealed`、`preventExtensions`、
+`propertyIsEnumerable`、`seal`、`setPrototypeOf`
+
+`Reflect`：`apply`、`construct`、`defineProperty`、`deleteProperty`、
+`getOwnPropertyDescriptor`、`getPrototypeOf`、
+`isExtensible`、`preventExtensions`、
+`setPrototypeOf`
+
+`Proxy`：`handler.apply()`、`handler.construct()`、
+`handler.defineProperty()`、`handler.deleteProperty()`、`handler.get()`、
+`handler.getOwnPropertyDescriptor()`、`handler.getPrototypeOf()`、
+`handler.has()`、`handler.isExtensible()`、`handler.ownKeys()`、
+`handler.preventExtensions()`、`handler.set()`、`handler.setPrototypeOf()`
+
+**相关约束**
+
+- 对象的属性名必须是合法的标识符
+- 不支持Symbol() API
+- 不支持通过索引访问字段
+- 仅允许在表达式中使用typeof运算符
+- 不支持in运算符
+- 不支持globalThis
+
+### 强制进行严格类型检查
+
+**规则：**`arkts-strict-typing`
+
+**级别：错误**
+
+在编译阶段，会进行TypeScript严格模式的类型检查，包括：
+`noImplicitReturns`,
+`strictFunctionTypes`,
+`strictNullChecks`,
+`strictPropertyInitialization`。
+
+**TypeScript**
+
+```typescript
+// 只有在开启noImplicitReturns选项时会产生编译时错误
+function foo(s: string): string {
+  if (s != '') {
+    console.log(s);
+    return s;
+  } else {
+    console.log(s);
+  }
+}
+
+let n: number = null; // 只有在开启strictNullChecks选项时会产生编译时错误
+```
+
+**ArkTS**
+
+```typescript
+function foo(s: string): string {
+  console.log(s);
+  return s;
+}
+
+let n1: number | null = null;
+let n2: number = 0;
+```
+
+在定义类时，如果无法在声明时或者构造函数中初始化某实例属性，那么可以使用确定赋值断言符`!`来消除`strictPropertyInitialization`的报错。
+
+使用确定赋值断言符会增加代码错误的风险，开发者需要保证该实例属性在被使用前已被赋值，否则可能会产生运行时异常。
+
+使用确定赋值断言符会增加运行时的类型检查，从而增加额外的运行时开销，所以应尽可能避免使用确定赋值断言符。
+
+使用确定赋值断言符将产生`warning: arkts-no-definite-assignment`。
+
+**TypeScript**
+
+```typescript
+class C {
+  name: string  // 只有在开启strictPropertyInitialization选项时会产生编译时错误
+  age: number   // 只有在开启strictPropertyInitialization选项时会产生编译时错误
+}
+
+let c = new C();
+```
+
+**ArkTS**
+
+```typescript
+class C {
+  name: string = ''
+  age!: number      // warning: arkts-no-definite-assignment
+
+  initAge(age: number) {
+    this.age = age;
+  }
+}
+
+let c = new C();
+c.initAge(10);
+```
+
+**相关约束**
+
+- 使用具体的类型而非any或unknown
+- 不允许通过注释关闭类型检查
+
+### 不允许通过注释关闭类型检查
+
+**规则：**`arkts-strict-typing-required`
+
+**级别：错误**
+
+在ArkTS中，类型检查不是可选项。不允许通过注释关闭类型检查，不支持使用`@ts-ignore`和`@ts-nocheck`。
+
+**TypeScript**
+
+```typescript
+// @ts-nocheck
+// ...
+// 关闭了类型检查后的代码
+// ...
+
+let s1: string = null; // 没有报错
+
+// @ts-ignore
+let s2: string = null; // 没有报错
+```
+
+**ArkTS**
+
+```typescript
+let s1: string | null = null; // 没有报错，合适的类型
+let s2: string = null; // 编译时报错
+```
+
+**相关约束**
+
+- 使用具体的类型而非any或unknown
+- 强制进行严格类型检查
+
+### 允许.ets文件`import`.ets/.ts/.js文件源码, 不允许.ts/.js文件`import`.ets文件源码
+
+**规则：**`arkts-no-ts-deps`
+
+**级别：错误**
+
+.ets文件可以`import`.ets/.ts/.js文件源码，但是.ts/.js文件不允许`import`.ets文件源码。
+
+**TypeScript**
+
+```typescript
+// app.ets
+export class C {
+  // ...
+}
+
+// lib.ts
+import { C } from 'app'
+```
+
+**ArkTS**
+
+```typescript
+// lib1.ets
+export class C {
+  // ...
+}
+
+// lib2.ets
+import { C } from 'lib1'
+```
+
+### `class`不能被用作对象
+
+**规则：**`arkts-no-classes-as-obj`
+
+**级别：警告**
+
+在ArkTS中，`class`声明的是一个新的类型，不是一个值。因此，不支持将`class`用作对象（例如将`class`赋值给一个对象）。
+
+### 不支持在`import`语句前使用其他语句
+
+**规则：**`arkts-no-misplaced-imports`
+
+**级别：错误**
+
+在ArkTS中，除动态`import`语句外，所有`import`语句需要放在所有其他语句之前。
+
+**TypeScript**
+
+```typescript
+class C {
+  s: string = ''
+  n: number = 0
+}
+
+import foo from 'module1'
+```
+
+**ArkTS**
+
+```typescript
+import foo from 'module1'
+
+class C {
+  s: string = ''
+  n: number = 0
+}
+
+import('module2').then(() => {}).catch(() => {})  // 动态import
+```
+
+### 限制使用`ESObject`类型
+
+**规则：**`arkts-limited-esobj`
+
+**级别：警告**
+
+为了防止动态对象（来自.ts/.js文件）在静态代码（.ets文件）中的滥用，`ESObject`类型在ArkTS中的使用是受限的。唯一允许使用`ESObject`类型的场景是将其用在局部变量的声明中。`ESObject`类型变量的赋值也是受限的，只能被来自跨语言调用的对象赋值，例如：`ESObject`、`any`、`unknown`、匿名类型等类型的变量。禁止使用静态类型的值（在.ets文件中定义的）初始化`ESObject`类型变量。`ESObject`类型变量只能用在跨语言调用的函数里或者赋值给另一个`ESObject`类型变量。
+
+**ArkTS**
+
+```typescript
+// lib.d.ts
+declare function foo(): any;
+declare function bar(a: any): number;
+
+// main.ets
+let e0: ESObject = foo(); // 编译时错误：ESObject类型只能用于局部变量
+
+function f() {
+  let e1 = foo();        // 编译时错误：e1的类型是any
+  let e2: ESObject = 1;  // 编译时错误：不能用非动态值初始化ESObject类型变量
+  let e3: ESObject = {}; // 编译时错误：不能用非动态值初始化ESObject类型变量
+  let e4: ESObject = []; // 编译时错误：不能用非动态值初始化ESObject类型变量
+  let e5: ESObject = ''; // 编译时错误：不能用非动态值初始化ESObject类型变量
+  e5['prop'];            // 编译时错误：不能访问ESObject类型变量的属性
+  e5[1];                 // 编译时错误：不能访问ESObject类型变量的属性
+  e5.prop;               // 编译时错误：不能访问ESObject类型变量的属性
+
+  let e6: ESObject = foo(); // OK，显式标注ESObject类型
+  let e7 = e6;              // OK，使用ESObject类型赋值
+  bar(e7);                  // OK，ESObject类型变量传给跨语言调用的函数
+}
+```
+
+**相关约束**
+
+- 对象的属性名必须是合法的标识符
+- 不支持Symbol() API
+- 不支持通过索引访问字段
+- 仅允许在表达式中使用typeof运算符
+- 不支持in运算符
+- 不支持globalThis

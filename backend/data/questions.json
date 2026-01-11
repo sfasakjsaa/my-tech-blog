@@ -4120,5 +4120,752 @@
     "isFrequent": false,
     "createdAt": "2026-01-11T04:13:42.578Z",
     "updatedAt": "2026-01-11T04:13:42.578Z"
+  },
+  {
+    "id": 1768105001492,
+    "title": "ArkTS通过规范约束了TypeScript（简称TS）中过于灵活而影响开发正确性或者给运行时带来不必要额外开销的特性。本文罗列了所有在ArkTS中限制的TS特性，并提供了重构代码的建议。ArkTS保留了TS大部分的语法特性，对于本文中没有约束的TS特性，则说明ArkTS完全支持它们。例如：ArkTS支持自定义装饰器，语法上和TS一致。按照本文提供的约束进行代码重构后的代码仍为合法有效的TS代码。",
+    "content": "<strong>示例</strong><br><br>包含关键字<code>var</code>的原始TypeScript代码：<br><br><pre><code class=\"language-typescript\">function addTen(x: number): number {<br>  var ten = 10;<br>  return x + ten;<br>}<br></code></pre><br><br>重构后的代码：<br><br><pre><code class=\"language-typescript\">function addTen(x: number): number {<br>  let ten = 10;<br>  return x + ten;<br>}<br></code></pre><br><br><strong>级别</strong><br><br>约束分为两个级别：错误、警告。<br><br><li><strong>错误</strong>: 必须要遵从的约束。如果不遵从该约束，将会导致程序编译失败。</li><br><li><strong>警告</strong>: 推荐遵从的约束。尽管现在违反该约束不会影响编译流程，但是在将来，违反该约束可能将会导致程序编译失败。</li><br><br><strong>不支持的特性</strong><br><br>目前，不支持的特性主要包括：<br><br><li>与降低运行时性能的动态类型相关的特性。</li><br><li>需要编译器额外支持从而导致项目构建时间增加的特性。</li><br><br>根据开发者的反馈以及更多实际场景的数据，我们将来可能进一步<strong>缩小</strong>不支持特性的范围。<br><br><h2>概述</h2><br><br>本节罗列了ArkTS不支持或部分支持的TypeScript特性。完整的列表以及详细的代码示例和重构建议，请参考[约束说明](#约束说明)。更多案例请参考[适配指导案例](arkts-more-cases.md)。",
+    "categoryId": "1768000001014",
+    "isFrequent": true,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001494,
+    "title": "强制使用静态类型",
+    "content": "静态类型是ArkTS最重要的特性之一。如果程序采用静态类型，即所有类型在编译时都是已知的，那么开发者就能够容易理解代码中使用了哪些数据结构。同时，由于所有类型在程序实际运行前都是已知的，编译器可以提前验证代码的正确性，从而可以减少运行时的类型检查，有助于提升性能。<br><br>基于上述考虑，ArkTS中禁止使用<code>any</code>类型。<br><br><strong>示例</strong><br><br><pre><code class=\"language-typescript\">// 不支持：<br>let res: any = some_api_function('hello', 'world');<br>// <code>res</code>是什么？错误代码的数字？字符串？对象？<br>// 该如何处理它？<br>// 支持：<br>class CallResult {<br>  public succeeded(): boolean { ... }<br>  public errorMessage(): string { ... }<br>}<br><br>let res: CallResult = some_api_function('hello', 'world');<br>if (!res.succeeded()) {<br>  console.log('Call failed: ' + res.errorMessage());<br>}<br></code></pre><br><br><code>any</code>类型在TypeScript中并不常见，只有大约1%的TypeScript代码库使用。一些代码检查工具（例如ESLint）也制定一系列规则来禁止使用<code>any</code>。因此，虽然禁止<code>any</code>将导致代码重构，但重构量很小，有助于整体性能提升。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001495,
+    "title": "禁止在运行时变更对象布局",
+    "content": "为实现最佳性能，ArkTS要求在程序执行期间不能更改对象的布局。换句话说，ArkTS禁止以下行为：<br><br><li>向对象中添加新的属性或方法。</li><br><li>从对象中删除已有的属性或方法。</li><br><li>将任意类型的值赋值给对象属性。</li><br><br>TypeScript编译器已经禁止了许多此类操作。然而，有些操作还是有可能绕过编译器的，例如，使用<code>as any</code>转换对象的类型，或者在编译TS代码时关闭严格类型检查的配置，或者在代码中通过<code>@ts-ignore</code>忽略类型检查。<br><br>在ArkTS中，严格类型检查不是可配置项。ArkTS强制进行部分严格类型检查，并通过规范禁止使用<code>any</code>类型，禁止在代码中使用<code>@ts-ignore</code>。<br><br><strong>示例</strong><br><br><pre><code class=\"language-typescript\">class Point {<br>  public x: number = 0<br>  public y: number = 0<br><br>  constructor(x: number, y: number) {<br>    this.x = x;<br>    this.y = y;<br>  }<br>}<br><br>// 无法从对象中删除某个属性，从而确保所有Point对象都具有属性x<br>let p1 = new Point(1.0, 1.0);<br>delete p1.x;           // 在TypeScript和ArkTS中，都会产生编译时错误<br>delete (p1 as any).x;  // 在TypeScript中不会报错；在ArkTS中会产生编译时错误<br><br>// Point类没有定义命名为z的属性，在程序运行时也无法添加该属性<br>let p2 = new Point(2.0, 2.0);<br>p2.z = 'Label';           // 在TypeScript和ArkTS中，都会产生编译时错误<br>(p2 as any).z = 'Label';   // 在TypeScript中不会报错；在ArkTS中会产生编译时错误<br><br>// 类的定义确保了所有Point对象只有属性x和y，并且无法被添加其他属性<br>let p3 = new Point(3.0, 3.0);<br>let prop = Symbol();      // 在TypeScript中不会报错；在ArkTS中会产生编译时错误<br>(p3 as any)[prop] = p3.x; // 在TypeScript中不会报错；在ArkTS中会产生编译时错误<br>p3[prop] = p3.x;          // 在TypeScript和ArkTS中，都会产生编译时错误<br><br>// 类的定义确保了所有Point对象的属性x和y都具有number类型，因此，无法将其他类型的值赋值给它们<br>let p4 = new Point(4.0, 4.0);<br>p4.x = 'Hello!';          // 在TypeScript和ArkTS中，都会产生编译时错误<br>(p4 as any).x = 'Hello!'; // 在TypeScript中不会报错；在ArkTS中会产生编译时错误<br><br>// 使用符合类定义的Point对象：<br>function distance(p1: Point, p2: Point): number {<br>  return Math.sqrt(<br>    (p2.x - p1.x) <em> (p2.x - p1.x) + (p2.y - p1.y) </em> (p2.y - p1.y)<br>  );<br>}<br>let p5 = new Point(5.0, 5.0);<br>let p6 = new Point(6.0, 6.0);<br>console.log('Distance between p5 and p6: ' + distance(p5, p6));<br></code></pre><br><br>修改对象布局会影响代码的可读性以及运行时性能。从开发者的角度来说，在某处定义类，然后又在其他地方修改实际的对象布局，很容易引起困惑乃至引入错误。此外，这点还需要额外的运行时支持，增加了执行开销。这一点与静态类型的约束也冲突：既然已决定使用显式类型，为什么还需要添加或删除属性呢？<br><br>当前，只有少数项目允许在运行时变更对象布局，一些常用的代码检查工具也增加了相应的限制规则。这个约束只会导致少量代码重构，但会提升性能。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001496,
+    "title": "限制运算符的语义",
+    "content": "为获得更好的性能并鼓励开发者编写更清晰的代码，ArkTS限制了一些运算符的语义。详细的语义限制，请参考[约束说明](#约束说明)。<br><br><strong>示例</strong><br><br><pre><code class=\"language-typescript\">// 一元运算符<code>+</code>只能作用于数值类型：<br>let t = +42;   // 合法运算<br>let s = +'42'; // 编译时错误<br></code></pre><br><br>使用额外的语义重载语言运算符会增加语言规范的复杂度，而且，开发者还被迫牢记所有可能的例外情况及对应的处理规则。在某些情况下，产生一些不必要的运行时开销。<br><br>当前只有不到1%的代码库使用该特性。因此，尽管限制运算符的语义需要重构代码，但重构量很小且非常容易操作，并且，通过重构能使代码更清晰、具备更高性能。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001497,
+    "title": "不支持 structural typing",
+    "content": "假设两个不相关的类<code>T</code>和<code>U</code>拥有相同的<code>public</code>API：<br><br><pre><code class=\"language-typescript\">class T {<br>  public name: string = ''<br><br>  public greet(): void {<br>    console.log('Hello, ' + this.name);<br>  }<br>}<br><br>class U {<br>  public name: string = ''<br><br>  public greet(): void {<br>    console.log('Greetings, ' + this.name);<br>  }<br>}<br></code></pre><br><br>能把类型为<code>T</code>的值赋给类型为<code>U</code>的变量吗？<br><br><pre><code class=\"language-typescript\">let u: U = new T(); // 是否允许？<br></code></pre><br><br>能把类型为<code>T</code>的值传递给接受类型为<code>U</code>的参数的函数吗？<br><br><pre><code class=\"language-typescript\">function greeter(u: U) {<br>  console.log('To ' + u.name);<br>  u.greet();<br>}<br><br>let t: T = new T();<br>greeter(t); // 是否允许？<br></code></pre><br><br>换句话说，我们将采取下面哪种方法呢：<br><br><li><code>T</code>和<code>U</code>没有继承关系或没有<code>implements</code>相同的接口，但由于它们具有相同的<code>public</code>API，它们“在某种程度上是相等的”，所以上述两个问题的答案都是“是”；</li><br><li><code>T</code>和<code>U</code>没有继承关系或没有<code>implements</code>相同的接口，应当始终被视为完全不同的类型，因此上述两个问题的答案都是“否”。</li><br><br>采用第一种方法的语言支持structural typing，而采用第二种方法的语言则不支持structural typing。目前TypeScript支持structural typing，而ArkTS不支持。<br><br>structural typing是否有助于生成清晰、易理解的代码，关于这一点并没有定论。那为什么ArkTS不支持structural typing呢？<br><br>因为对structural typing的支持是一个重大的特性，需要在语言规范、编译器和运行时进行大量的考虑和仔细的实现。另外，由于ArkTS使用静态类型，运行时为了支持这个特性需要额外的性能开销。<br><br>鉴于此，当前我们还不支持该特性。根据实际场景的需求和反馈，我们后续会重新加以考虑。更多案例和建议请参考[约束说明](#约束说明)。<br><br><h2>约束说明</h2>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001498,
+    "title": "对象的属性名必须是合法的标识符",
+    "content": "<strong>规则：</strong><code>arkts-identifiers-as-prop-names</code><br><br><strong>级别：错误</strong><br><br>在ArkTS中，对象的属性名不能为数字或字符串。例外：ArkTS支持属性名为字符串字面量和枚举中的字符串值。通过属性名访问类的属性，通过数值索引访问数组元素。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">var x = { 'name': 'x', 2: '3' };<br><br>console.log(x['name']);<br>console.log(x[2]);<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class X {<br>  public name: string = ''<br>}<br>let x: X = { name: 'x' };<br>console.log(x.name);<br><br>let y = ['a', 'b', 'c'];<br>console.log(y[2]);<br><br>// 在需要通过非标识符（即不同类型的key）获取数据的场景中，使用Map<Object, some_type>。<br>let z = new Map<Object, string>();<br>z.set('name', '1');<br>z.set(2, '2');<br>console.log(z.get('name'));<br>console.log(z.get(2));<br><br>enum Test {<br>  A = 'aaa',<br>  B = 'bbb'<br>}<br><br>let obj: Record<string, number> = {<br>  [Test.A]: 1,   // 枚举中的字符串值<br>  [Test.B]: 2,   // 枚举中的字符串值<br>  ['value']: 3   // 字符串字面量<br>}<br></code></pre><br><br><strong>相关约束</strong><br><br><li>不支持Symbol() API</li><br><li>不支持通过索引访问字段</li><br><li>不支持delete运算符</li><br><li>仅允许在表达式中使用typeof运算符</li><br><li>不支持in运算符</li><br><li>限制使用标准库</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001499,
+    "title": "不支持`Symbol()`API",
+    "content": "<strong>规则：</strong><code>arkts-no-symbol</code><br><br><strong>级别：错误</strong><br><br>TypeScript中的<code>Symbol()</code>API用于在运行时生成唯一的属性名称。由于该API的常见使用场景在静态类型语言中没有意义，因此，ArkTS不支持<code>Symbol()</code>API。在ArkTS中，对象布局在编译时就确定了，且不能在运行时被更改。<br><br>ArkTS只支持<code>Symbol.iterator</code>。<br><br><strong>相关约束</strong><br><br><li>仅支持属性名为标识符的对象</li><br><li>不支持通过索引访问字段</li><br><li>不支持delete运算符</li><br><li>仅允许在表达式中使用typeof运算符</li><br><li>不支持in运算符</li><br><li>限制使用标准库</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001500,
+    "title": "不支持以`#`开头的私有字段",
+    "content": "<strong>规则：</strong><code>arkts-no-private-identifiers</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持使用<code>#</code>符号开头声明的私有字段。改用<code>private</code>关键字。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  #foo: number = 42<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  private foo: number = 42<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001501,
+    "title": "类型、命名空间的命名必须唯一",
+    "content": "<strong>规则：</strong><code>arkts-unique-names</code><br><br><strong>级别：错误</strong><br><br>类型（类、接口、枚举）、命名空间的命名必须唯一，且与其他名称（例如：变量名、函数名）不同。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let X: string<br>type X = number[] // 类型的别名与变量同名<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let X: string<br>type T = number[] // 为避免名称冲突，此处不允许使用X<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001502,
+    "title": "使用`let`而非`var`",
+    "content": "<strong>规则：</strong><code>arkts-no-var</code><br><br><strong>级别：错误</strong><br><br><code>let</code>关键字可以在块级作用域中声明变量，帮助程序员避免错误。因此，ArkTS不支持<code>var</code>，请使用<code>let</code>声明变量。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">function f(shouldInitialize: boolean) {<br>  if (shouldInitialize) {<br>     var x = 'b';<br>  }<br>  return x;<br>}<br><br>console.log(f(true));  // b<br>console.log(f(false)); // undefined<br><br>let upperLet = 0;<br>{<br>  var scopedVar = 0;<br>  let scopedLet = 0;<br>  upperLet = 5;<br>}<br>scopedVar = 5; // 可见<br>scopedLet = 5; // 编译时错误<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">function f(shouldInitialize: boolean): string {<br>  let x: string = 'a';<br>  if (shouldInitialize) {<br>    x = 'b';<br>  }<br>  return x;<br>}<br><br>console.log(f(true));  // b<br>console.log(f(false)); // a<br><br>let upperLet = 0;<br>let scopedVar = 0;<br>{<br>  let scopedLet = 0;<br>  upperLet = 5;<br>}<br>scopedVar = 5;<br>scopedLet = 5; //编译时错误<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001503,
+    "title": "使用具体的类型而非`any`或`unknown`",
+    "content": "<strong>规则：</strong><code>arkts-no-any-unknown</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持<code>any</code>和<code>unknown</code>类型。显式指定具体类型。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let value1: any<br>value1 = true;<br>value1 = 42;<br><br>let value2: unknown<br>value2 = true;<br>value2 = 42;<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let value_b: boolean = true; // 或者 let value_b = true<br>let value_n: number = 42; // 或者 let value_n = 42<br>let value_o1: Object = true;<br>let value_o2: Object = 42;<br></code></pre><br><br><strong>相关约束</strong><br><br>强制进行严格类型检查",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001504,
+    "title": "使用`class`而非具有call signature的类型",
+    "content": "<strong>规则：</strong><code>arkts-no-call-signatures</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持对象类型中包含call signature。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">type DescribableFunction = {<br>  description: string<br>  (someArg: string): string // call signature<br>}<br><br>function doSomething(fn: DescribableFunction): void {<br>  console.log(fn.description + ' returned ' + fn(''));<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class DescribableFunction {<br>  description: string<br>  public invoke(someArg: string): string {<br>    return someArg;<br>  }<br>  constructor() {<br>    this.description = 'desc';<br>  }<br>}<br><br>function doSomething(fn: DescribableFunction): void {<br>  console.log(fn.description + ' returned ' + fn.invoke(''));<br>}<br><br>doSomething(new DescribableFunction());<br></code></pre><br><br><strong>相关约束</strong><br><br>使用class而非具有构造签名的类型",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001505,
+    "title": "使用`class`而非具有构造签名的类型",
+    "content": "<strong>规则：</strong><code>arkts-no-ctor-signatures-type</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持对象类型中的构造签名。改用类。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class SomeObject {}<br><br>type SomeConstructor = {<br>  new (s: string): SomeObject<br>}<br><br>function fn(ctor: SomeConstructor) {<br>  return new ctor('hello');<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class SomeObject {<br>  public f: string<br>  constructor (s: string) {<br>    this.f = s;<br>  }<br>}<br><br>function fn(s: string): SomeObject {<br>  return new SomeObject(s);<br>}<br></code></pre><br><br><strong>相关约束</strong><br><br>使用class而非具有call signature的类型",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001506,
+    "title": "仅支持一个静态块",
+    "content": "<strong>规则：</strong><code>arkts-no-multiple-static-blocks</code><br><br><strong>级别：错误</strong><br><br>ArkTS不允许类中有多个静态块，如果存在多个静态块语句，请合并到一个静态块中。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  static s: string<br><br>  static {<br>    C.s = 'aa'<br>  }<br>  static {<br>    C.s = C.s + 'bb'<br>  }<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  static s: string<br><br>  static {<br>    C.s = 'aa'<br>    C.s = C.s + 'bb'<br>  }<br>}<br></code></pre><br><br><strong>说明</strong><br><br>当前不支持静态块的语法。支持该语法后，在.ets文件中使用静态块须遵循本约束。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001507,
+    "title": "不支持index signature",
+    "content": "<strong>规则：</strong><code>arkts-no-indexed-signatures</code><br><br><strong>级别：错误</strong><br><br>ArkTS不允许index signature，改用数组。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// 带index signature的接口：<br>interface StringArray {<br>  [index: number]: string<br>}<br><br>function getStringArray(): StringArray {<br>  return ['a', 'b', 'c'];<br>}<br><br>const myArray: StringArray = getStringArray();<br>const secondItem = myArray[1];<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class X {<br>  public f: string[] = []<br>}<br><br>let myArray: X = new X();<br>const secondItem = myArray.f[1];<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001508,
+    "title": "使用继承而非intersection type",
+    "content": "<strong>规则：</strong><code>arkts-no-intersection-types</code><br><br><strong>级别：错误</strong><br><br>目前ArkTS不支持intersection type，可以使用继承作为替代方案。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">interface Identity {<br>  id: number<br>  name: string<br>}<br><br>interface Contact {<br>  email: string<br>  phoneNumber: string<br>}<br><br>type Employee = Identity & Contact<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">interface Identity {<br>  id: number<br>  name: string<br>}<br><br>interface Contact {<br>  email: string<br>  phoneNumber: string<br>}<br><br>interface Employee extends Identity,  Contact {}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001509,
+    "title": "不支持`this`类型",
+    "content": "<strong>规则：</strong><code>arkts-no-typing-with-this</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持<code>this</code>类型，改用显式具体类型。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">interface ListItem {<br>  getHead(): this<br>}<br><br>class C {<br>  n: number = 0<br><br>  m(c: this) {<br>    // ...<br>  }<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">interface ListItem {<br>  getHead(): ListItem<br>}<br><br>class C {<br>  n: number = 0<br><br>  m(c: C) {<br>    // ...<br>  }<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001510,
+    "title": "不支持条件类型",
+    "content": "<strong>规则：</strong><code>arkts-no-conditional-types</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持条件类型别名，引入带显式约束的新类型，或使用<code>Object</code>重写逻辑。<br>不支持<code>infer</code>关键字。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">type X<T> = T extends number ? T: never<br>type Y<T> = T extends Array<infer Item> ? Item: never<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// 在类型别名中提供显式约束<br>type X1<T extends number> = T<br><br>// 用Object重写，类型控制较少，需要更多的类型检查以确保安全<br>type X2<T> = Object<br><br>// Item必须作为泛型参数使用，并能正确实例化<br>type YI<Item, T extends Array<Item>> = Item<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001511,
+    "title": "不支持在`constructor`中声明字段",
+    "content": "<strong>规则：</strong><code>arkts-no-ctor-prop-decls</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持在<code>constructor</code>中声明类字段。在<code>class</code>中声明这些字段。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Person {<br>  constructor(<br>    protected ssn: string,<br>    private firstName: string,<br>    private lastName: string<br>  ) {<br>    this.ssn = ssn;<br>    this.firstName = firstName;<br>    this.lastName = lastName;<br>  }<br><br>  getFullName(): string {<br>    return this.firstName + ' ' + this.lastName;<br>  }<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Person {<br>  protected ssn: string<br>  private firstName: string<br>  private lastName: string<br><br>  constructor(ssn: string, firstName: string, lastName: string) {<br>    this.ssn = ssn;<br>    this.firstName = firstName;<br>    this.lastName = lastName;<br>  }<br><br>  getFullName(): string {<br>    return this.firstName + ' ' + this.lastName;<br>  }<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001512,
+    "title": "接口中不支持构造签名",
+    "content": "<strong>规则：</strong><code>arkts-no-ctor-signatures-iface</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持在接口中使用构造签名。改用函数或者方法。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">interface I {<br>  new (s: string): I<br>}<br><br>function fn(i: I) {<br>  return new i('hello');<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">interface I {<br>  create(s: string): I<br>}<br><br>function fn(i: I) {<br>  return i.create('hello');<br>}<br></code></pre><br><br><strong>相关约束</strong><br><br>使用class而非具有构造签名的类型",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001513,
+    "title": "不支持索引访问类型",
+    "content": "<strong>规则：</strong><code>arkts-no-aliases-by-index</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持索引访问类型。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001514,
+    "title": "不支持通过索引访问字段",
+    "content": "<strong>规则：</strong><code>arkts-no-props-by-index</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持动态声明字段，不支持动态访问字段。只能访问已在类中声明或者继承可见的字段，访问其他字段将会造成编译时错误。<br>使用点操作符访问字段，例如（<code>obj.field</code>），不支持索引访问（<code>obj[field]</code>）。<br>ArkTS支持通过索引访问<code>TypedArray</code>（例如<code>Int32Array</code>）中的元素。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Point {<br>  x: string = ''<br>  y: string = ''<br>}<br>let p: Point = {x: '1', y: '2'};<br>console.log(p['x']);<br><br>class Person {<br>  name: string = ''<br>  age: number = 0;<br>  [key: string]: string | number<br>}<br><br>let person: Person = {<br>  name: 'John',<br>  age: 30,<br>  email: '<em><strong>@example.com',<br>  phoneNumber: '18</strong></em>***<em><strong>',<br>}<br></code></pre><br><br></strong>ArkTS<strong><br><br><pre><code class=\"language-typescript\">class Point {<br>  x: string = ''<br>  y: string = ''<br>}<br>let p: Point = {x: '1', y: '2'};<br>console.log(p.x);<br><br>class Person {<br>  name: string<br>  age: number<br>  email: string<br>  phoneNumber: string<br><br>  constructor(name: string, age: number, email: string,<br>        phoneNumber: string) {<br>    this.name = name;<br>    this.age = age;<br>    this.email = email;<br>    this.phoneNumber = phoneNumber;<br>  }<br>}<br><br>let person = new Person('John', 30, '</strong></em>@example.com', '18*********');<br>console.log(person['name']);     // 编译时错误<br>console.log(person.unknownProperty); // 编译时错误<br><br>let arr = new Int32Array(1);<br>arr[0];<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001515,
+    "title": "不支持structural typing",
+    "content": "<strong>规则：</strong><code>arkts-no-structural-typing</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持structural typing，编译器无法比较两种类型的<code>public</code>API并决定它们是否相同。使用其他机制，例如继承、接口或类型别名。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">interface I1 {<br>  f(): string<br>}<br><br>interface I2 { // I2等价于I1<br>  f(): string<br>}<br><br>class X {<br>  n: number = 0<br>  s: string = ''<br>}<br><br>class Y { // Y等价于X<br>  n: number = 0<br>  s: string = ''<br>}<br><br>let x = new X();<br>let y = new Y();<br><br>console.log('Assign X to Y');<br>y = x;<br><br>console.log('Assign Y to X');<br>x = y;<br><br>function foo(x: X) {<br>  console.log(x.n + x.s);<br>}<br><br>// 由于X和Y的API是等价的，所以X和Y是等价的<br>foo(new X());<br>foo(new Y());<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">interface I1 {<br>  f(): string<br>}<br><br>type I2 = I1 // I2是I1的别名<br><br>class B {<br>  n: number = 0<br>  s: string = ''<br>}<br><br>// D是B的继承类，构建了子类型和父类型的关系<br>class D extends B {<br>  constructor() {<br>    super()<br>  }<br>}<br><br>let b = new B();<br>let d = new D();<br><br>console.log('Assign D to B');<br>b = d; // 合法赋值，因为B是D的父类<br><br>// 将b赋值给d将会引起编译时错误<br>// d = b<br><br>interface Z {<br>   n: number<br>   s: string<br>}<br><br>// 类X implements 接口Z，构建了X和Y的关系<br>class X implements Z {<br>  n: number = 0<br>  s: string = ''<br>}<br><br>// 类Y implements 接口Z，构建了X和Y的关系<br>class Y implements Z {<br>  n: number = 0<br>  s: string = ''<br>}<br><br>let x: Z = new X();<br>let y: Z = new Y();<br><br>console.log('Assign X to Y');<br>y = x // 合法赋值，它们是相同的类型<br><br>console.log('Assign Y to X');<br>x = y // 合法赋值，它们是相同的类型<br><br>function foo(c: Z): void {<br>  console.log(c.n + c.s);<br>}<br><br>// 类X和类Y implement 相同的接口，因此下面的两个函数调用都是合法的<br>foo(new X());<br>foo(new Y());<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001516,
+    "title": "需要显式标注泛型函数类型实参",
+    "content": "<strong>规则：</strong><code>arkts-no-inferred-generic-params</code><br><br><strong>级别：错误</strong><br><br>如果可以从传递给泛型函数的参数中推断出具体类型，ArkTS允许省略泛型类型实参。否则，省略泛型类型实参会发生编译时错误。<br>禁止仅基于泛型函数返回类型推断泛型类型参数。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">function choose<T>(x: T, y: T): T {<br>  return Math.random() < 0.5 ? x: y;<br>}<br><br>let x = choose(10, 20);   // 推断choose<number>(...)<br>let y = choose('10', 20); // 编译时错误<br><br>function greet<T>(): T {<br>  return 'Hello' as T;<br>}<br>let z = greet() // T的类型被推断为“unknown”<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">function choose<T>(x: T, y: T): T {<br>  return Math.random() < 0.5 ? x: y;<br>}<br><br>let x = choose(10, 20);   // 推断choose<number>(...)<br>let y = choose('10', 20); // 编译时错误<br><br>function greet<T>(): T {<br>  return 'Hello' as T;<br>}<br>let z = greet<string>();<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001517,
+    "title": "需要显式标注对象字面量的类型",
+    "content": "<strong>规则：</strong><code>arkts-no-untyped-obj-literals</code><br><br><strong>级别：错误</strong><br><br>在ArkTS中，需要显式标注对象字面量的类型，否则，将发生编译时错误。在某些场景下，编译器可以根据上下文推断出字面量的类型。<br><br>在以下上下文中不支持使用字面量初始化类和接口：<br><br><li>初始化具有<code>any</code>、<code>Object</code>或<code>object</code>类型的任何对象</li><br><li>初始化带有方法的类或接口</li><br><li>初始化包含自定义含参数的构造函数的类</li><br><li>初始化带<code>readonly</code>字段的类</li><br><br><strong>例子1</strong><br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let o1 = {n: 42, s: 'foo'};<br>let o2: Object = {n: 42, s: 'foo'};<br>let o3: object = {n: 42, s: 'foo'};<br><br>let oo: Object[] = [{n: 1, s: '1'}, {n: 2, s: '2'}];<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C1 {<br>  n: number = 0<br>  s: string = ''<br>}<br><br>let o1: C1 = {n: 42, s: 'foo'};<br>let o2: C1 = {n: 42, s: 'foo'};<br>let o3: C1 = {n: 42, s: 'foo'};<br><br>let oo: C1[] = [{n: 1, s: '1'}, {n: 2, s: '2'}];<br></code></pre><br><br><strong>例子2</strong><br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C2 {<br>  s: string<br>  constructor(s: string) {<br>    this.s = 's =' + s;<br>  }<br>}<br>let o4: C2 = {s: 'foo'};<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C2 {<br>  s: string<br>  constructor(s: string) {<br>    this.s = 's =' + s;<br>  }<br>}<br>let o4 = new C2('foo');<br></code></pre><br><br><strong>例子3</strong><br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C3 {<br>  readonly n: number = 0<br>  readonly s: string = ''<br>}<br>let o5: C3 = {n: 42, s: 'foo'};<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C3 {<br>  n: number = 0<br>  s: string = ''<br>}<br>let o5: C3 = {n: 42, s: 'foo'};<br></code></pre><br><br><strong>例子4</strong><br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">abstract class A {}<br>let o6: A = {};<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">abstract class A {}<br>class C extends A {}<br>let o6: C = {}; // 或 let o6: C = new C()<br></code></pre><br><br><strong>例子5</strong><br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C4 {<br>  n: number = 0<br>  s: string = ''<br>  f() {<br>    console.log('Hello');<br>  }<br>}<br>let o7: C4 = {n: 42, s: 'foo', f: () => {}};<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C4 {<br>  n: number = 0<br>  s: string = ''<br>  f() {<br>    console.log('Hello');<br>  }<br>}<br>let o7 = new C4();<br>o7.n = 42;<br>o7.s = 'foo';<br></code></pre><br><br><strong>例子6</strong><br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Point {<br>  x: number = 0<br>  y: number = 0<br>}<br><br>function getPoint(o: Point): Point {<br>  return o;<br>}<br><br>// TS支持structural typing，可以推断p的类型为Point<br>let p = {x: 5, y: 10};<br>getPoint(p);<br><br>// 可通过上下文推断出对象字面量的类型为Point<br>getPoint({x: 5, y: 10});<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Point {<br>  x: number = 0<br>  y: number = 0<br><br>  // 在字面量初始化之前，使用constructor()创建一个有效对象。<br>  // 由于没有为Point定义构造函数，编译器将自动添加一个默认构造函数。<br>}<br><br>function getPoint(o: Point): Point {<br>  return o;<br>}<br><br>// 字面量初始化需要显式定义类型<br>let p: Point = {x: 5, y: 10};<br>getPoint(p);<br><br>// getPoint接受Point类型，字面量初始化生成一个Point的新实例<br>getPoint({x: 5, y: 10});<br></code></pre><br><br><strong>相关约束</strong><br><br><li>对象字面量不能用于类型声明</li><br><li>数组字面量必须仅包含可推断类型的元素</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001518,
+    "title": "对象字面量不能用于类型声明",
+    "content": "<strong>规则：</strong><code>arkts-no-obj-literals-as-types</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持使用对象字面量声明类型，可以使用类或者接口声明类型。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let o: {x: number, y: number} = {<br>  x: 2,<br>  y: 3<br>}<br><br>type S = Set<{x: number, y: number}><br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class O {<br>  x: number = 0<br>  y: number = 0<br>}<br><br>let o: O = {x: 2, y: 3};<br><br>type S = Set<O><br></code></pre><br><br><strong>相关约束</strong><br><br><li>对象字面量必须对应某些显式声明的类或接口</li><br><li>数组字面量必须仅包含可推断类型的元素</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001519,
+    "title": "数组字面量必须仅包含可推断类型的元素",
+    "content": "<strong>规则：</strong><code>arkts-no-noninferrable-arr-literals</code><br><br><strong>级别：错误</strong><br><br>本质上，ArkTS将数组字面量的类型推断为数组所有元素的联合类型。如果其中任何一个元素的类型无法根据上下文推导出来（例如，无类型的对象字面量），则会发生编译时错误。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let a = [{n: 1, s: '1'}, {n: 2, s: '2'}];<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  n: number = 0<br>  s: string = ''<br>}<br><br>let a1 = [{n: 1, s: '1'} as C, {n: 2, s: '2'} as C]; // a1的类型为“C[]”<br>let a2: C[] = [{n: 1, s: '1'}, {n: 2, s: '2'}];    // a2的类型为“C[]”<br></code></pre><br><br><strong>相关约束</strong><br><br><li>对象字面量必须对应某些显式声明的类或接口</li><br><li>对象字面量不能用于类型声明</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001520,
+    "title": "使用箭头函数而非函数表达式",
+    "content": "<strong>规则：</strong><code>arkts-no-func-expressions</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持函数表达式，使用箭头函数。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let f = function (s: string) {<br>  console.log(s);<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let f = (s: string) => {<br>  console.log(s);<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001521,
+    "title": "不支持使用类表达式",
+    "content": "<strong>规则：</strong><code>arkts-no-class-literals</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持使用类表达式，必须显式声明一个类。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">const Rectangle = class {<br>  constructor(height: number, width: number) {<br>    this.height = height;<br>    this.width = width;<br>  }<br><br>  height<br>  width<br>}<br><br>const rectangle = new Rectangle(0.0, 0.0);<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Rectangle {<br>  constructor(height: number, width: number) {<br>    this.height = height;<br>    this.width = width;<br>  }<br><br>  height: number<br>  width: number<br>}<br><br>const rectangle = new Rectangle(0.0, 0.0);<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001522,
+    "title": "类不允许`implements`",
+    "content": "<strong>规则：</strong><code>arkts-implements-only-iface</code><br><br><strong>级别：错误</strong><br><br>ArkTS不允许类被<code>implements</code>，只有接口可以被<code>implements</code>。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  foo() {}<br>}<br><br>class C1 implements C {<br>  foo() {}<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">interface C {<br>  foo(): void<br>}<br><br>class C1 implements C {<br>  foo() {}<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001523,
+    "title": "不支持修改对象的方法",
+    "content": "<strong>规则：</strong><code>arkts-no-method-reassignment</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持修改对象的方法。在静态语言中，对象的布局是确定的。一个类的所有对象实例享有同一个方法。<br>如果需要为某个特定的对象增加方法，可以封装函数或者使用继承的机制。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  foo() {<br>    console.log('foo');<br>  }<br>}<br><br>function bar() {<br>  console.log('bar');<br>}<br><br>let c1 = new C();<br>let c2 = new C();<br>c2.foo = bar;<br><br>c1.foo(); // foo<br>c2.foo(); // bar<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  foo() {<br>    console.log('foo');<br>  }<br>}<br><br>class Derived extends C {<br>  foo() {<br>    console.log('Extra');<br>    super.foo();<br>  }<br>}<br><br>function bar() {<br>  console.log('bar');<br>}<br><br>let c1 = new C();<br>let c2 = new C();<br>c1.foo(); // foo<br>c2.foo(); // foo<br><br>let c3 = new Derived();<br>c3.foo(); // Extra foo<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001524,
+    "title": "类型转换仅支持`as T`语法",
+    "content": "<strong>规则：</strong><code>arkts-as-casts</code><br><br><strong>级别：错误</strong><br><br>在ArkTS中，<code>as</code>关键字是类型转换的唯一语法，错误的类型转换会导致编译时错误或者运行时抛出<code>ClassCastException</code>异常。ArkTS不支持使用<code><type></code>语法进行类型转换。<br><br>当需要将<code>primitive</code>类型（如<code>number</code>或<code>boolean</code>）转换成引用类型时，请使用<code>new</code>表达式。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Shape {}<br>class Circle extends Shape { x: number = 5 }<br>class Square extends Shape { y: string = 'a' }<br><br>function createShape(): Shape {<br>  return new Circle();<br>}<br><br>let c1 = <Circle> createShape();<br><br>let c2 = createShape() as Circle;<br><br>// 如果转换错误，不会产生编译时或运行时报错<br>let c3 = createShape() as Square;<br>console.log(c3.y); // undefined<br><br>// 在TS中，由于<code>as</code>关键字不会在运行时生效，所以<code>instanceof</code>的左操作数不会在运行时被装箱成引用类型<br>let e1 = (5.0 as Number) instanceof Number; // false<br><br>// 创建Number对象，获得预期结果：<br>let e2 = (new Number(5.0)) instanceof Number; // true<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Shape {}<br>class Circle extends Shape { x: number = 5 }<br>class Square extends Shape { y: string = 'a' }<br><br>function createShape(): Shape {<br>  return new Circle();<br>}<br><br>let c2 = createShape() as Circle;<br><br>// 运行时抛出ClassCastException异常：<br>let c3 = createShape() as Square;<br><br>// 创建Number对象，获得预期结果：<br>let e2 = (new Number(5.0)) instanceof Number; // true<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001525,
+    "title": "不支持JSX表达式",
+    "content": "<strong>规则：</strong><code>arkts-no-jsx</code><br><br><strong>级别：错误</strong><br><br>不支持使用JSX。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001526,
+    "title": "一元运算符`+`、`-`和`~`仅适用于数值类型",
+    "content": "<strong>规则：</strong><code>arkts-no-polymorphic-unops</code><br><br><strong>级别：错误</strong><br><br>ArkTS仅允许一元运算符用于数值类型，否则会发生编译时错误。与TypeScript不同，ArkTS不支持隐式将字符串转换成数值，必须进行显式转换。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let a = +5;    // 5（number类型）<br>let b = +'5';    // 5（number类型）<br>let c = -5;    // -5（number类型）<br>let d = -'5';    // -5（number类型）<br>let e = ~5;    // -6（number类型）<br>let f = ~'5';    // -6（number类型）<br>let g = +'string'; // NaN（number类型）<br><br>function returnTen(): string {<br>  return '-10';<br>}<br><br>function returnString(): string {<br>  return 'string';<br>}<br><br>let x = +returnTen();  // -10（number类型）<br>let y = +returnString(); // NaN<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let a = +5;    // 5（number类型）<br>let b = +'5';    // 编译时错误<br>let c = -5;    // -5（number类型）<br>let d = -'5';    // 编译时错误<br>let e = ~5;    // -6（number类型）<br>let f = ~'5';    // 编译时错误<br>let g = +'string'; // 编译时错误<br><br>function returnTen(): string {<br>  return '-10';<br>}<br><br>function returnString(): string {<br>  return 'string';<br>}<br><br>let x = +returnTen();  // 编译时错误<br>let y = +returnString(); // 编译时错误<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001527,
+    "title": "不支持`delete`运算符",
+    "content": "<strong>规则：</strong><code>arkts-no-delete</code><br><br><strong>级别：错误</strong><br><br>ArkTS中，对象布局在编译时就确定了，且不能在运行时被更改。因此，删除属性的操作没有意义。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Point {<br>  x?: number = 0.0<br>  y?: number = 0.0<br>}<br><br>let p = new Point();<br>delete p.y;<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// 可以声明一个可空类型并使用null作为缺省值<br>class Point {<br>  x: number | null = 0<br>  y: number | null = 0<br>}<br><br>let p = new Point();<br>p.y = null;<br></code></pre><br><br><strong>相关约束</strong><br><br><li>对象的属性名必须是合法的标识符</li><br><li>不支持Symbol() API</li><br><li>不支持通过索引访问字段</li><br><li>仅允许在表达式中使用typeof运算符</li><br><li>不支持in运算符</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001528,
+    "title": "仅允许在表达式中使用`typeof`运算符",
+    "content": "<strong>规则：</strong><code>arkts-no-type-query</code><br><br><strong>级别：错误</strong><br><br>ArkTS仅支持在表达式中使用<code>typeof</code>运算符，不允许使用<code>typeof</code>作为类型。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let n1 = 42;<br>let s1 = 'foo';<br>console.log(typeof n1); // 'number'<br>console.log(typeof s1); // 'string'<br>let n2: typeof n1<br>let s2: typeof s1<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let n1 = 42;<br>let s1 = 'foo';<br>console.log(typeof n1); // 'number'<br>console.log(typeof s1); // 'string'<br>let n2: number<br>let s2: string<br></code></pre><br><br><strong>相关约束</strong><br><br><li>对象的属性名必须是合法的标识符</li><br><li>不支持Symbol() API</li><br><li>不支持通过索引访问字段</li><br><li>不支持delete运算符</li><br><li>不支持in运算符</li><br><li>限制使用标准库</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001529,
+    "title": "部分支持`instanceof`运算符",
+    "content": "<strong>规则：</strong><code>arkts-instanceof-ref-types</code><br><br><strong>级别：错误</strong><br><br>在TypeScript中，<code>instanceof</code>运算符的左操作数的类型必须为<code>any</code>类型、对象类型，或者它是类型参数，否则结果为<code>false</code>。在ArkTS中，<code>instanceof</code>运算符的左操作数的类型必须为引用类型（例如，对象、数组或者函数），否则会发生编译时错误。此外，在ArkTS中，<code>instanceof</code>运算符的左操作数不能是类型，必须是对象的实例。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001530,
+    "title": "不支持`in`运算符",
+    "content": "<strong>规则：</strong><code>arkts-no-in</code><br><br><strong>级别：错误</strong><br><br>由于在ArkTS中，对象布局在编译时是已知的并且在运行时无法修改，因此，不支持<code>in</code>运算符。如果仍需检查某些类成员是否存在，使用<code>instanceof</code>代替。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Person {<br>  name: string = ''<br>}<br>let p = new Person();<br><br>let b = 'name' in p; // true<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Person {<br>  name: string = ''<br>}<br>let p = new Person();<br><br>let b = p instanceof Person; // true，且属性name一定存在<br></code></pre><br><br><strong>相关约束</strong><br><br><li>对象的属性名必须是合法的标识符</li><br><li>不支持Symbol() API</li><br><li>不支持通过索引访问字段</li><br><li>不支持delete运算符</li><br><li>仅允许在表达式中使用typeof运算符</li><br><li>限制使用标准库</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001531,
+    "title": "不支持解构赋值",
+    "content": "<strong>规则：</strong><code>arkts-no-destruct-assignment</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持解构赋值。可使用其他替代方法，例如，使用临时变量。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let [one, two] = [1, 2]; // 此处需要分号<br>[one, two] = [two, one];<br><br>let head, tail<br>[head, ...tail] = [1, 2, 3, 4];<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let arr: number[] = [1, 2];<br>let one = arr[0];<br>let two = arr[1];<br><br>let tmp = one;<br>one = two;<br>two = tmp;<br><br>let data: Number[] = [1, 2, 3, 4];<br>let head = data[0];<br>let tail: Number[] = [];<br>for (let i = 1; i < data.length; ++i) {<br>  tail.push(data[i]);<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001532,
+    "title": "逗号运算符`,`仅用在`for`循环语句中",
+    "content": "<strong>规则：</strong><code>arkts-no-comma-outside-loops</code><br><br><strong>级别：错误</strong><br><br>为了方便理解执行顺序，在ArkTS中，逗号运算符仅适用于<code>for</code>循环语句中。注意与声明变量、函数参数传递时的逗号分隔符不同。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">for (let i = 0, j = 0; i < 10; ++i, j += 2) {<br>  // ...<br>}<br><br>let x = 0;<br>x = (++x, x++); // 1<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">for (let i = 0, j = 0; i < 10; ++i, j += 2) {<br>  // ...<br>}<br><br>// 通过语句表示执行顺序，而非逗号运算符<br>let x = 0;<br>++x;<br>x = x++;<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001533,
+    "title": "不支持解构变量声明",
+    "content": "<strong>规则：</strong><code>arkts-no-destruct-decls</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持解构变量声明。它是一个依赖于结构兼容性的动态特性并且解构声明中的名称必须和被解构对象中的属性名称一致。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Point {<br>  x: number = 0.0<br>  y: number = 0.0<br>}<br><br>function returnZeroPoint(): Point {<br>  return new Point();<br>}<br><br>let {x, y} = returnZeroPoint();<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Point {<br>  x: number = 0.0<br>  y: number = 0.0<br>}<br><br>function returnZeroPoint(): Point {<br>  return new Point();<br>}<br><br>// 创建一个局部变量来处理每个字段<br>let zp = returnZeroPoint();<br>let x = zp.x;<br>let y = zp.y;<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001535,
+    "title": "不支持在catch语句标注类型",
+    "content": "<strong>规则：</strong><code>arkts-no-types-in-catch</code><br><br><strong>级别：错误</strong><br><br>在TypeScript的catch语句中，只能标注<code>any</code>或<code>unknown</code>类型。由于ArkTS不支持这些类型，应省略类型标注。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">try {<br>  // ...<br>} catch (a: unknown) {<br>  // 处理异常<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">try {<br>  // ...<br>} catch (a) {<br>  // 处理异常<br>}<br></code></pre><br><br><strong>相关约束</strong><br><br>限制throw语句中表达式的类型",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001536,
+    "title": "不支持`for .. in`",
+    "content": "<strong>规则：</strong><code>arkts-no-for-in</code><br><br><strong>级别：错误</strong><br><br>由于在ArkTS中，对象布局在编译时是确定的、并且不能在运行时被改变，所以不支持使用<code>for .. in</code>迭代一个对象的属性。对于数组来说，可以使用常规的<code>for</code>循环。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let a: string[] = ['1.0', '2.0', '3.0'];<br>for (let i in a) {<br>  console.log(a[i]);<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let a: string[] = ['1.0', '2.0', '3.0'];<br>for (let i = 0; i < a.length; ++i) {<br>  console.log(a[i]);<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001537,
+    "title": "不支持映射类型",
+    "content": "<strong>规则：</strong><code>arkts-no-mapped-types</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持映射类型，使用其他语法来表示相同的语义。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">type OptionsFlags<Type> = {<br>  [Property in keyof Type]: boolean<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  n: number = 0<br>  s: string = ''<br>}<br><br>class CFlags {<br>  n: boolean = false<br>  s: boolean = false<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001538,
+    "title": "不支持`with`语句",
+    "content": "<strong>规则：</strong><code>arkts-no-with</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持<code>with</code>语句，使用其他语法来表示相同的语义。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">with (Math) { // 编译时错误, 但是仍能生成JavaScript代码<br>  let r: number = 42;<br>  let area: number = PI <em> r </em> r;<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let r: number = 42;<br>let area: number = Math.PI <em> r </em> r;<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001539,
+    "title": "限制`throw`语句中表达式的类型",
+    "content": "<strong>规则：</strong><code>arkts-limited-throw</code><br><br><strong>级别：错误</strong><br><br>ArkTS只支持抛出<code>Error</code>类或其派生类的实例。禁止抛出其他类型（例如<code>number</code>或<code>string</code>）的数据。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">throw 4;<br>throw '';<br>throw new Error();<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">throw new Error();<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001540,
+    "title": "限制省略函数返回类型标注",
+    "content": "<strong>规则：</strong><code>arkts-no-implicit-return-types</code><br><br><strong>级别：错误</strong><br><br>ArkTS在部分场景中支持对函数返回类型进行推断。当<code>return</code>语句中的表达式是对某个函数或方法进行调用，且该函数或方法的返回类型没有被显著标注时，会出现编译时错误。在这种情况下，请标注函数返回类型。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// 只有在开启noImplicitAny选项时会产生编译时错误<br>function f(x: number) {<br>  if (x <= 0) {<br>    return x;<br>  }<br>  return g(x);<br>}<br><br>// 只有在开启noImplicitAny选项时会产生编译时错误<br>function g(x: number) {<br>  return f(x - 1);<br>}<br><br>function doOperation(x: number, y: number) {<br>  return x + y;<br>}<br><br>f(10);<br>doOperation(2, 3);<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// 需标注返回类型：<br>function f(x: number): number {<br>  if (x <= 0) {<br>    return x;<br>  }<br>  return g(x);<br>}<br><br>// 可以省略返回类型，返回类型可以从f的类型标注推导得到<br>function g(x: number): number {<br>  return f(x - 1);<br>}<br><br>// 可以省略返回类型<br>function doOperation(x: number, y: number) {<br>  return x + y;<br>}<br><br>f(10);<br>doOperation(2, 3);<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001541,
+    "title": "不支持参数解构的函数声明",
+    "content": "<strong>规则：</strong><code>arkts-no-destruct-params</code><br><br><strong>级别：错误</strong><br><br>ArkTS要求实参必须直接传递给函数，且必须指定到形参。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">function drawText({ text = '', location: [x, y] = [0, 0], bold = false }) {<br>  text;<br>  x;<br>  y;<br>  bold;<br>}<br><br>drawText({ text: 'Hello, world!', location: [100, 50], bold: true });<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">function drawText(text: String, location: number[], bold: boolean) {<br>  let x = location[0];<br>  let y = location[1];<br>  text;<br>  x;<br>  y;<br>  bold;<br>}<br><br>function main() {<br>  drawText('Hello, world!', [100, 50], true);<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001542,
+    "title": "不支持在函数内声明函数",
+    "content": "<strong>规则：</strong><code>arkts-no-nested-funcs</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持在函数内声明函数，改用lambda函数。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">function addNum(a: number, b: number): void {<br><br>  // 函数内声明函数<br>  function logToConsole(message: string): void {<br>    console.log(message);<br>  }<br><br>  let result = a + b;<br><br>  // 调用函数<br>  logToConsole('result is ' + result);<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">function addNum(a: number, b: number): void {<br>  // 使用lambda函数代替声明函数<br>  let logToConsole: (message: string) => void = (message: string): void => {<br>    console.log(message);<br>  }<br><br>  let result = a + b;<br><br>  logToConsole('result is ' + result);<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001543,
+    "title": "不支持在函数和类的静态方法中使用`this`",
+    "content": "<strong>规则：</strong><code>arkts-no-standalone-this</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持在函数和类的静态方法中使用<code>this</code>，只能在类的实例方法中使用<code>this</code>。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">function foo(i: string) {<br>  this.count = i; // 只有在开启noImplicitThis选项时会产生编译时错误<br>}<br><br>class A {<br>  count: string = 'a'<br>  m = foo<br>}<br><br>let a = new A();<br>console.log(a.count); // 打印a<br>a.m('b');<br>console.log(a.count); // 打印b<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class A {<br>  count: string = 'a'<br>  m(i: string): void {<br>    this.count = i;<br>  }<br>}<br><br>function main(): void {<br>  let a = new A();<br>  console.log(a.count);  // 打印a<br>  a.m('b');<br>  console.log(a.count);  // 打印b<br>}<br></code></pre><br><br><strong>相关约束</strong><br><br>不支持Function.apply、Function.bind以及Function.call",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001544,
+    "title": "不支持生成器函数",
+    "content": "<strong>规则：</strong><code>arkts-no-generators</code><br><br><strong>级别：错误</strong><br><br>目前ArkTS不支持生成器函数，使用<code>async</code>或<code>await</code>机制进行并行任务处理。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">function* counter(start: number, end: number) {<br>  for (let i = start; i <= end; i++) {<br>    yield i;<br>  }<br>}<br><br>for (let num of counter(1, 5)) {<br>  console.log(num);<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">async function complexNumberProcessing(str: string): Promise<string> {<br>  // ...<br>  return str;<br>}<br><br>async function foo() {<br>  for (let i = 1; i <= 5; i++) {<br>    console.log(await complexNumberProcessing(i));<br>  }<br>}<br><br>foo()<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001545,
+    "title": "使用`instanceof`和`as`进行类型保护",
+    "content": "<strong>规则：</strong><code>arkts-no-is</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持<code>is</code>运算符，必须用<code>instanceof</code>运算符替代。在使用之前，必须使用<code>as</code>运算符将对象转换为需要的类型。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Foo {<br>  foo: string = ''<br>  common: string = ''<br>}<br><br>class Bar {<br>  bar: string = ''<br>  common: string = ''<br>}<br><br>function isFoo(arg: any): arg is Foo {<br>  return arg.foo !== undefined;<br>}<br><br>function doStuff(arg: Foo | Bar) {<br>  if (isFoo(arg)) {<br>    console.log(arg.foo);  // OK<br>    console.log(arg.bar);  // 编译时错误<br>  } else {<br>    console.log(arg.foo);  // 编译时错误<br>    console.log(arg.bar);  // OK<br>  }<br>}<br><br>doStuff({ foo: 123, common: '123' });<br>doStuff({ bar: 123, common: '123' });<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Foo {<br>  foo: string = ''<br>  common: string = ''<br>}<br><br>class Bar {<br>  bar: string = ''<br>  common: string = ''<br>}<br><br>function isFoo(arg: Object): boolean {<br>  return arg instanceof Foo;<br>}<br><br>function doStuff(arg: Object): void {<br>  if (isFoo(arg)) {<br>    let fooArg = arg as Foo;<br>    console.log(fooArg.foo);   // OK<br>    console.log(arg.bar);    // 编译时错误<br>  } else {<br>    let barArg = arg as Bar;<br>    console.log(arg.foo);    // 编译时错误<br>    console.log(barArg.bar);   // OK<br>  }<br>}<br><br>function main(): void {<br>  doStuff(new Foo());<br>  doStuff(new Bar());<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001547,
+    "title": "部分支持展开运算符",
+    "content": "<strong>规则：</strong><code>arkts-no-spread</code><br><br><strong>级别：错误</strong><br><br>ArkTS仅支持使用展开运算符展开数组、<code>Array</code>的子类和<code>TypedArray</code>（例如<code>Int32Array</code>）。仅支持使用在以下场景中：<br><br>1. 传递给剩余参数时<br>2. 复制一个数组到数组字面量<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">function foo(x: number, y: number, z: number) {<br>  // ...<br>}<br><br>let args: [number, number, number] = [0, 1, 2];<br>foo(...args);<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">function log_numbers(x: number, y: number, z: number) {<br>  // ...<br>}<br><br>let numbers: number[] = [1, 2, 3];<br>log_numbers(numbers[0], numbers[1], numbers[2]);<br></code></pre><br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let point2d = { x: 1, y: 2 };<br>let point3d = { ...point2d, z: 3 };<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Point2D {<br>  x: number = 0; y: number = 0<br>}<br><br>class Point3D {<br>  x: number = 0; y: number = 0; z: number = 0<br>  constructor(p2d: Point2D, z: number) {<br>    this.x = p2d.x;<br>    this.y = p2d.y;<br>    this.z = z;<br>  }<br>}<br><br>let p3d = new Point3D({ x: 1, y: 2 } as Point2D, 3);<br><br>class DerivedFromArray extends Uint16Array {};<br><br>let arr1 = [1, 2, 3];<br>let arr2 = new Uint16Array([4, 5, 6]);<br>let arr3 = new DerivedFromArray([7, 8, 9]);<br>let arr4 = [...arr1, 10, ...arr2, 11, ...arr3];<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001548,
+    "title": "接口不能继承具有相同方法的两个接口",
+    "content": "<strong>规则：</strong><code>arkts-no-extend-same-prop</code><br><br><strong>级别：错误</strong><br><br>在TypeScript中，如果一个接口继承了具有相同方法的两个接口，则该接口必须使用联合类型来声明该方法的返回值类型。在ArkTS中，由于一个接口中不能包含两个无法区分的方法（例如两个参数列表相同但返回类型不同的方法），因此，接口不能继承具有相同方法的两个接口。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">interface Mover {<br>  getStatus(): { speed: number }<br>}<br>interface Shaker {<br>  getStatus(): { frequency: number }<br>}<br><br>interface MoverShaker extends Mover, Shaker {<br>  getStatus(): {<br>    speed: number<br>    frequency: number<br>  }<br>}<br><br>class C implements MoverShaker {<br>  private speed: number = 0<br>  private frequency: number = 0<br><br>  getStatus() {<br>    return { speed: this.speed, frequency: this.frequency };<br>  }<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class MoveStatus {<br>  public speed: number<br>  constructor() {<br>    this.speed = 0;<br>  }<br>}<br>interface Mover {<br>  getMoveStatus(): MoveStatus<br>}<br><br>class ShakeStatus {<br>  public frequency: number<br>  constructor() {<br>    this.frequency = 0;<br>  }<br>}<br>interface Shaker {<br>  getShakeStatus(): ShakeStatus<br>}<br><br>class MoveAndShakeStatus {<br>  public speed: number<br>  public frequency: number<br>  constructor() {<br>    this.speed = 0;<br>    this.frequency = 0;<br>  }<br>}<br><br>class C implements Mover, Shaker {<br>  private move_status: MoveStatus<br>  private shake_status: ShakeStatus<br><br>  constructor() {<br>    this.move_status = new MoveStatus();<br>    this.shake_status = new ShakeStatus();<br>  }<br><br>  public getMoveStatus(): MoveStatus {<br>    return this.move_status;<br>  }<br><br>  public getShakeStatus(): ShakeStatus {<br>    return this.shake_status;<br>  }<br><br>  public getStatus(): MoveAndShakeStatus {<br>    return {<br>      speed: this.move_status.speed,<br>      frequency: this.shake_status.frequency<br>    };<br>  }<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001549,
+    "title": "不支持声明合并",
+    "content": "<strong>规则：</strong><code>arkts-no-decl-merging</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持类、接口的声明合并。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">interface Document {<br>  createElement(tagName: any): Element<br>}<br><br>interface Document {<br>  createElement(tagName: string): HTMLElement<br>}<br><br>interface Document {<br>  createElement(tagName: number): HTMLDivElement<br>  createElement(tagName: boolean): HTMLSpanElement<br>  createElement(tagName: string, value: number): HTMLCanvasElement<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">interface Document {<br>  createElement(tagName: number): HTMLDivElement<br>  createElement(tagName: boolean): HTMLSpanElement<br>  createElement(tagName: string, value: number): HTMLCanvasElement<br>  createElement(tagName: string): HTMLElement<br>  createElement(tagName: Object): Element<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001550,
+    "title": "接口不能继承类",
+    "content": "<strong>规则：</strong><code>arkts-extends-only-class</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持接口继承类，接口只能继承接口。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Control {<br>  state: number = 0<br>}<br><br>interface SelectableControl extends Control {<br>  select(): void<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">interface Control {<br>  state: number<br>}<br><br>interface SelectableControl extends Control {<br>  select(): void<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001551,
+    "title": "不支持构造函数类型",
+    "content": "<strong>规则：</strong><code>arkts-no-ctor-signatures-funcs</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持使用构造函数类型，改用lambda函数。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class Person {<br>  constructor(<br>    name: string,<br>    age: number<br>  ) {}<br>}<br>type PersonCtor = new (name: string, age: number) => Person<br><br>function createPerson(Ctor: PersonCtor, name: string, age: number): Person<br>{<br>  return new Ctor(name, age);<br>}<br><br>const person = createPerson(Person, 'John', 30);<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class Person {<br>  constructor(<br>    name: string,<br>    age: number<br>  ) {}<br>}<br>type PersonCtor = (n: string, a: number) => Person<br><br>function createPerson(Ctor: PersonCtor, n: string, a: number): Person {<br>  return Ctor(n, a);<br>}<br><br>let Impersonizer: PersonCtor = (n: string, a: number): Person => {<br>  return new Person(n, a);<br>}<br><br>const person = createPerson(Impersonizer, 'John', 30);<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001552,
+    "title": "只能使用类型相同的编译时表达式初始化枚举成员",
+    "content": "<strong>规则：</strong><code>arkts-no-enum-mixed-types</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持使用在运行期间才能计算的表达式来初始化枚举成员。此外，枚举中所有显式初始化的成员必须具有相同的类型。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">enum E1 {<br>  A = 0xa,<br>  B = 0xb,<br>  C = Math.random(),<br>  D = 0xd,<br>  E // 推断出0xe<br>}<br><br>enum E2 {<br>  A = 0xa,<br>  B = '0xb',<br>  C = 0xc,<br>  D = '0xd'<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">enum E1 {<br>  A = 0xa,<br>  B = 0xb,<br>  C = 0xc,<br>  D = 0xd,<br>  E // 推断出0xe<br>}<br><br>enum E2 {<br>  A = '0xa',<br>  B = '0xb',<br>  C = '0xc',<br>  D = '0xd'<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001553,
+    "title": "不支持`enum`声明合并",
+    "content": "<strong>规则：</strong><code>arkts-no-enum-merging</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持<code>enum</code>声明合并。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">enum ColorSet {<br>  RED,<br>  GREEN<br>}<br>enum ColorSet {<br>  YELLOW = 2<br>}<br>enum ColorSet {<br>  BLACK = 3,<br>  BLUE<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">enum ColorSet {<br>  RED,<br>  GREEN,<br>  YELLOW,<br>  BLACK,<br>  BLUE<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001554,
+    "title": "命名空间不能被用作对象",
+    "content": "<strong>规则：</strong><code>arkts-no-ns-as-obj</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持将命名空间用作对象，可以使用类或模块。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">namespace MyNamespace {<br>  export let x: number<br>}<br><br>let m = MyNamespace;<br>m.x = 2;<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">namespace MyNamespace {<br>  export let x: number<br>}<br><br>MyNamespace.x = 2;<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001555,
+    "title": "不支持命名空间中的非声明语句",
+    "content": "<strong>规则：</strong><code>arkts-no-ns-statements</code><br><br><strong>级别：错误</strong><br><br>在ArkTS中，命名空间用于定义标志符可见范围，只在编译时有效。因此，不支持命名空间中的非声明语句。可以将非声明语句写在函数中。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">namespace A {<br>  export let x: number<br>  x = 1;<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">namespace A {<br>  export let x: number<br><br>  export function init() {<br>    x = 1;<br>  }<br>}<br><br>// 调用初始化函数来执行<br>A.init();<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001556,
+    "title": "不支持`require`和`import`赋值表达式",
+    "content": "<strong>规则：</strong><code>arkts-no-require</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持通过<code>require</code>导入，也不支持<code>import</code>赋值表达式，改用<code>import</code>。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">import m = require('mod')<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">import * as m from 'mod'<br></code></pre><br><br><strong>相关约束</strong><br><br>不支持export = ...语法",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001557,
+    "title": "不支持`export = ...`语法",
+    "content": "<strong>规则：</strong><code>arkts-no-export-assignment</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持<code>export = ...</code>语法，改用常规的<code>export</code>或<code>import</code>。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// module1<br>export = Point<br><br>class Point {<br>  constructor(x: number, y: number) {}<br>  static origin = new Point(0, 0)<br>}<br><br>// module2<br>import Pt = require('module1')<br><br>let p = Pt.Point.origin;<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// module1<br>export class Point {<br>  constructor(x: number, y: number) {}<br>  static origin = new Point(0, 0)<br>}<br><br>// module2<br>import * as Pt from 'module1'<br><br>let p = Pt.Point.origin<br></code></pre><br><br><strong>相关约束</strong><br><br>不支持require和import赋值表达式",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001558,
+    "title": "不支持ambient module声明",
+    "content": "<strong>规则：</strong><code>arkts-no-ambient-decls</code><br><br><strong>级别：错误</strong><br><br>由于ArkTS本身有与JavaScript交互的机制，ArkTS不支持ambient module声明。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">declare module 'someModule' {<br>  export function normalize(s: string): string;<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// 从原始模块中导入需要的内容<br>import { normalize } from 'someModule'<br></code></pre><br><br><strong>相关约束</strong><br><br>不支持在模块名中使用通配符",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001559,
+    "title": "不支持在模块名中使用通配符",
+    "content": "<strong>规则：</strong><code>arkts-no-module-wildcards</code><br><br><strong>级别：错误</strong><br><br>由于在ArkTS中，导入是编译时而非运行时行为，因此，不支持在模块名中使用通配符。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// 声明<br>declare module '<em>!text' {<br>  const content: string<br>  export default content<br>}<br><br>// 使用代码<br>import fileContent from 'some.txt!text'<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// 声明<br>declare namespace N {<br>  function foo(x: number): number<br>}<br><br>// 使用代码<br>import </em> as m from 'module'<br>console.log('N.foo called: ' + N.foo(42));<br></code></pre><br><br><strong>相关约束</strong><br><br><li>不支持ambient module声明</li><br><li>不支持通用模块定义(UMD)</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001560,
+    "title": "不支持通用模块定义(UMD)",
+    "content": "<strong>规则：</strong><code>arkts-no-umd</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持通用模块定义（UMD）。因为在ArkTS中没有“脚本”的概念（相对于“模块”）。此外，在ArkTS中，导入是编译时而非运行时特性。改用<code>export</code>和<code>import</code>语法。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// math-lib.d.ts<br>export const isPrime(x: number): boolean<br>export as namespace mathLib<br><br>// 脚本中<br>mathLib.isPrime(2)<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// math-lib.d.ts<br>namespace mathLib {<br>  export isPrime(x: number): boolean<br>}<br><br>// 程序中<br>import { mathLib } from 'math-lib'<br>mathLib.isPrime(2)<br></code></pre><br><br><strong>相关约束</strong><br><br>不支持在模块名中使用通配符",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001561,
+    "title": "不支持`new.target`",
+    "content": "<strong>规则：</strong><code>arkts-no-new-target</code><br><br><strong>级别：错误</strong><br><br>ArkTS没有原型的概念，因此不支持<code>new.target</code>。此特性不符合静态类型的原则。<br><br><strong>相关约束</strong><br><br>不支持在原型上赋值",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001562,
+    "title": "不支持确定赋值断言",
+    "content": "<strong>规则：</strong><code>arkts-no-definite-assignment</code><br><br><strong>级别：警告</strong><br><br>ArkTS不支持确定赋值断言，例如：<code>let v!: T</code>。改为在声明变量的同时为变量赋值。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let x!: number // 提示：在使用前将x初始化<br><br>initialize();<br><br>function initialize() {<br>  x = 10;<br>}<br><br>console.log('x = ' + x);<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">function initialize(): number {<br>  return 10;<br>}<br><br>let x: number = initialize();<br><br>console.log('x = ' + x);<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001563,
+    "title": "不支持在原型上赋值",
+    "content": "<strong>规则：</strong><code>arkts-no-prototype-assignment</code><br><br><strong>级别：错误</strong><br><br>ArkTS没有原型的概念，因此不支持在原型上赋值。此特性不符合静态类型的原则。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">let C = function(p) {<br>  this.p = p; // 只有在开启noImplicitThis选项时会产生编译时错误<br>}<br><br>C.prototype = {<br>  m() {<br>    console.log(this.p);<br>  }<br>}<br><br>C.prototype.q = function(r: string) {<br>  return this.p == r;<br>}<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  p: string = ''<br>  m() {<br>    console.log(this.p);<br>  }<br>  q(r: string) {<br>    return this.p == r;<br>  }<br>}<br></code></pre><br><br><strong>相关约束</strong><br><br>不支持new.target",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001564,
+    "title": "不支持`globalThis`",
+    "content": "<strong>规则：</strong><code>arkts-no-globalthis</code><br><br><strong>级别：警告</strong><br><br>由于ArkTS不支持动态更改对象的布局，因此不支持全局作用域和<code>globalThis</code>。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// 全局文件中<br>var abc = 100;<br><br>// 从上面引用'abc'<br>let x = globalThis.abc;<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// file1<br>export let abc: number = 100;<br><br>// file2<br>import * as M from 'file1'<br><br>let x = M.abc;<br></code></pre><br><br><strong>相关约束</strong><br><br><li>不支持声明函数的属性</li><br><li>标准库使用限制</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001565,
+    "title": "不支持一些utility类型",
+    "content": "<strong>规则：</strong><code>arkts-no-utility-types</code><br><br><strong>级别：错误</strong><br><br>ArkTS仅支持<code>Partial</code>、<code>Required</code>、<code>Readonly</code>和<code>Record</code>，不支持TypeScript中其他的<code>Utility Types</code>。<br><br>对于<code>Record</code>类型的对象，通过索引访问到的值的类型是包含<code>undefined</code>的联合类型。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001566,
+    "title": "不支持对函数声明属性",
+    "content": "<strong>规则：</strong><code>arkts-no-func-props</code><br><br><strong>级别：错误</strong><br><br>由于ArkTS不支持动态改变函数对象布局，因此，不支持对函数声明属性。<br><br><strong>相关约束</strong><br><br>不支持globalThis",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001567,
+    "title": "不支持`Function.apply`和`Function.call`",
+    "content": "<strong>规则：</strong><code>arkts-no-func-apply-call</code><br><br><strong>级别：错误</strong><br><br>ArkTS不允许使用标准库函数<code>Function.apply</code>和<code>Function.call</code>。标准库使用这些函数来显式设置被调用函数的<code>this</code>参数。在ArkTS中，<code>this</code>的语义仅限于传统的OOP风格，函数体中禁止使用<code>this</code>。<br><br><strong>相关约束</strong><br><br>不支持在函数中使用this",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001568,
+    "title": "不支持`Function.bind`",
+    "content": "<strong>规则：</strong><code>arkts-no-func-bind</code><br><br><strong>级别：警告</strong><br><br>ArkTS不允许使用标准库函数<code>Function.bind</code>。标准库使用这些函数来显式设置被调用函数的<code>this</code>参数。在ArkTS中，<code>this</code>的语义仅限于传统的OOP风格，函数体中禁止使用<code>this</code>。<br><br><strong>相关约束</strong><br><br>不支持在函数中使用this",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001569,
+    "title": "不支持`as const`断言",
+    "content": "<strong>规则：</strong><code>arkts-no-as-const</code><br><br><strong>级别：错误</strong><br><br>ArkTS不支持<code>as const</code>断言。在标准TypeScript中，<code>as const</code>用于标注字面量的相应字面量类型，而ArkTS不支持字面量类型。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// 'hello'类型<br>let x = 'hello' as const;<br><br>// 'readonly [10, 20]'类型<br>let y = [10, 20] as const;<br><br>// '{ readonly text: 'hello' }'类型<br>let z = { text: 'hello' } as const;<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// 'string'类型<br>let x: string = 'hello';<br><br>// 'number[]'类型<br>let y: number[] = [10, 20];<br><br>class Label {<br>  text: string = ''<br>}<br><br>// 'Label'类型<br>let z: Label = {<br>  text: 'hello'<br>}<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001570,
+    "title": "不支持导入断言",
+    "content": "<strong>规则：</strong><code>arkts-no-import-assertions</code><br><br><strong>级别：错误</strong><br><br>由于在ArkTS中，导入是编译时而非运行时特性，因此，ArkTS不支持导入断言。在运行时检查导入的API是否正确，对于静态类型的语言来说是没有意义的。改用常规的<code>import</code>语法。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">import { obj } from 'something.json' assert { type: 'json' }<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// 编译时将检查导入T的正确性<br>import { something } from 'module'<br></code></pre><br><br><strong>相关约束</strong><br><br><li>不支持在模块名中使用通配符</li><br><li>不支持通用模块定义(UMD)</li><br><li>不支持运行时导入断言</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001571,
+    "title": "限制使用标准库",
+    "content": "<strong>规则：</strong><code>arkts-limited-stdlib</code><br><br><strong>级别：错误</strong><br><br>ArkTS不允许使用TypeScript或JavaScript标准库中的某些接口。大部分接口与动态特性有关。ArkTS中禁止使用以下接口：<br><br>全局对象的属性和方法：<code>eval</code><br><br><code>Object</code>：<code>__proto__</code>、<code>__defineGetter__</code>、<code>__defineSetter__</code>、<br><code>__lookupGetter__</code>、<code>__lookupSetter__</code>、<code>assign</code>、<code>create</code>、<br><code>defineProperties</code>、<code>defineProperty</code>、<code>freeze</code>、<br><code>fromEntries</code>、<code>getOwnPropertyDescriptor</code>、<code>getOwnPropertyDescriptors</code>、<br><code>getOwnPropertySymbols</code>、<code>getPrototypeOf</code>、<br><code>hasOwnProperty</code>、<code>is</code>、<code>isExtensible</code>、<code>isFrozen</code>、<br><code>isPrototypeOf</code>、<code>isSealed</code>、<code>preventExtensions</code>、<br><code>propertyIsEnumerable</code>、<code>seal</code>、<code>setPrototypeOf</code><br><br><code>Reflect</code>：<code>apply</code>、<code>construct</code>、<code>defineProperty</code>、<code>deleteProperty</code>、<br><code>getOwnPropertyDescriptor</code>、<code>getPrototypeOf</code>、<br><code>isExtensible</code>、<code>preventExtensions</code>、<br><code>setPrototypeOf</code><br><br><code>Proxy</code>：<code>handler.apply()</code>、<code>handler.construct()</code>、<br><code>handler.defineProperty()</code>、<code>handler.deleteProperty()</code>、<code>handler.get()</code>、<br><code>handler.getOwnPropertyDescriptor()</code>、<code>handler.getPrototypeOf()</code>、<br><code>handler.has()</code>、<code>handler.isExtensible()</code>、<code>handler.ownKeys()</code>、<br><code>handler.preventExtensions()</code>、<code>handler.set()</code>、<code>handler.setPrototypeOf()</code><br><br><strong>相关约束</strong><br><br><li>对象的属性名必须是合法的标识符</li><br><li>不支持Symbol() API</li><br><li>不支持通过索引访问字段</li><br><li>仅允许在表达式中使用typeof运算符</li><br><li>不支持in运算符</li><br><li>不支持globalThis</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001572,
+    "title": "强制进行严格类型检查",
+    "content": "<strong>规则：</strong><code>arkts-strict-typing</code><br><br><strong>级别：错误</strong><br><br>在编译阶段，会进行TypeScript严格模式的类型检查，包括：<br><code>noImplicitReturns</code>,<br><code>strictFunctionTypes</code>,<br><code>strictNullChecks</code>,<br><code>strictPropertyInitialization</code>。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// 只有在开启noImplicitReturns选项时会产生编译时错误<br>function foo(s: string): string {<br>  if (s != '') {<br>    console.log(s);<br>    return s;<br>  } else {<br>    console.log(s);<br>  }<br>}<br><br>let n: number = null; // 只有在开启strictNullChecks选项时会产生编译时错误<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">function foo(s: string): string {<br>  console.log(s);<br>  return s;<br>}<br><br>let n1: number | null = null;<br>let n2: number = 0;<br></code></pre><br><br>在定义类时，如果无法在声明时或者构造函数中初始化某实例属性，那么可以使用确定赋值断言符<code>!</code>来消除<code>strictPropertyInitialization</code>的报错。<br><br>使用确定赋值断言符会增加代码错误的风险，开发者需要保证该实例属性在被使用前已被赋值，否则可能会产生运行时异常。<br><br>使用确定赋值断言符会增加运行时的类型检查，从而增加额外的运行时开销，所以应尽可能避免使用确定赋值断言符。<br><br>使用确定赋值断言符将产生<code>warning: arkts-no-definite-assignment</code>。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  name: string  // 只有在开启strictPropertyInitialization选项时会产生编译时错误<br>  age: number   // 只有在开启strictPropertyInitialization选项时会产生编译时错误<br>}<br><br>let c = new C();<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  name: string = ''<br>  age!: number      // warning: arkts-no-definite-assignment<br><br>  initAge(age: number) {<br>    this.age = age;<br>  }<br>}<br><br>let c = new C();<br>c.initAge(10);<br></code></pre><br><br><strong>相关约束</strong><br><br><li>使用具体的类型而非any或unknown</li><br><li>不允许通过注释关闭类型检查</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001573,
+    "title": "不允许通过注释关闭类型检查",
+    "content": "<strong>规则：</strong><code>arkts-strict-typing-required</code><br><br><strong>级别：错误</strong><br><br>在ArkTS中，类型检查不是可选项。不允许通过注释关闭类型检查，不支持使用<code>@ts-ignore</code>和<code>@ts-nocheck</code>。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// @ts-nocheck<br>// ...<br>// 关闭了类型检查后的代码<br>// ...<br><br>let s1: string = null; // 没有报错<br><br>// @ts-ignore<br>let s2: string = null; // 没有报错<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">let s1: string | null = null; // 没有报错，合适的类型<br>let s2: string = null; // 编译时报错<br></code></pre><br><br><strong>相关约束</strong><br><br><li>使用具体的类型而非any或unknown</li><br><li>强制进行严格类型检查</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001574,
+    "title": "允许.ets文件`import`.ets/.ts/.js文件源码, 不允许.ts/.js文件`import`.ets文件源码",
+    "content": "<strong>规则：</strong><code>arkts-no-ts-deps</code><br><br><strong>级别：错误</strong><br><br>.ets文件可以<code>import</code>.ets/.ts/.js文件源码，但是.ts/.js文件不允许<code>import</code>.ets文件源码。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">// app.ets<br>export class C {<br>  // ...<br>}<br><br>// lib.ts<br>import { C } from 'app'<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// lib1.ets<br>export class C {<br>  // ...<br>}<br><br>// lib2.ets<br>import { C } from 'lib1'<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001575,
+    "title": "`class`不能被用作对象",
+    "content": "<strong>规则：</strong><code>arkts-no-classes-as-obj</code><br><br><strong>级别：警告</strong><br><br>在ArkTS中，<code>class</code>声明的是一个新的类型，不是一个值。因此，不支持将<code>class</code>用作对象（例如将<code>class</code>赋值给一个对象）。",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001576,
+    "title": "不支持在`import`语句前使用其他语句",
+    "content": "<strong>规则：</strong><code>arkts-no-misplaced-imports</code><br><br><strong>级别：错误</strong><br><br>在ArkTS中，除动态<code>import</code>语句外，所有<code>import</code>语句需要放在所有其他语句之前。<br><br><strong>TypeScript</strong><br><br><pre><code class=\"language-typescript\">class C {<br>  s: string = ''<br>  n: number = 0<br>}<br><br>import foo from 'module1'<br></code></pre><br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">import foo from 'module1'<br><br>class C {<br>  s: string = ''<br>  n: number = 0<br>}<br><br>import('module2').then(() => {}).catch(() => {})  // 动态import<br></code></pre>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
+  },
+  {
+    "id": 1768105001577,
+    "title": "限制使用`ESObject`类型",
+    "content": "<strong>规则：</strong><code>arkts-limited-esobj</code><br><br><strong>级别：警告</strong><br><br>为了防止动态对象（来自.ts/.js文件）在静态代码（.ets文件）中的滥用，<code>ESObject</code>类型在ArkTS中的使用是受限的。唯一允许使用<code>ESObject</code>类型的场景是将其用在局部变量的声明中。<code>ESObject</code>类型变量的赋值也是受限的，只能被来自跨语言调用的对象赋值，例如：<code>ESObject</code>、<code>any</code>、<code>unknown</code>、匿名类型等类型的变量。禁止使用静态类型的值（在.ets文件中定义的）初始化<code>ESObject</code>类型变量。<code>ESObject</code>类型变量只能用在跨语言调用的函数里或者赋值给另一个<code>ESObject</code>类型变量。<br><br><strong>ArkTS</strong><br><br><pre><code class=\"language-typescript\">// lib.d.ts<br>declare function foo(): any;<br>declare function bar(a: any): number;<br><br>// main.ets<br>let e0: ESObject = foo(); // 编译时错误：ESObject类型只能用于局部变量<br><br>function f() {<br>  let e1 = foo();        // 编译时错误：e1的类型是any<br>  let e2: ESObject = 1;  // 编译时错误：不能用非动态值初始化ESObject类型变量<br>  let e3: ESObject = {}; // 编译时错误：不能用非动态值初始化ESObject类型变量<br>  let e4: ESObject = []; // 编译时错误：不能用非动态值初始化ESObject类型变量<br>  let e5: ESObject = ''; // 编译时错误：不能用非动态值初始化ESObject类型变量<br>  e5['prop'];            // 编译时错误：不能访问ESObject类型变量的属性<br>  e5[1];                 // 编译时错误：不能访问ESObject类型变量的属性<br>  e5.prop;               // 编译时错误：不能访问ESObject类型变量的属性<br><br>  let e6: ESObject = foo(); // OK，显式标注ESObject类型<br>  let e7 = e6;              // OK，使用ESObject类型赋值<br>  bar(e7);                  // OK，ESObject类型变量传给跨语言调用的函数<br>}<br></code></pre><br><br><strong>相关约束</strong><br><br><li>对象的属性名必须是合法的标识符</li><br><li>不支持Symbol() API</li><br><li>不支持通过索引访问字段</li><br><li>仅允许在表达式中使用typeof运算符</li><br><li>不支持in运算符</li><br><li>不支持globalThis</li>",
+    "categoryId": "1768000001014",
+    "isFrequent": false,
+    "createdAt": "2026-01-11T04:16:41.483Z",
+    "updatedAt": "2026-01-11T04:16:41.483Z"
   }
 ]
