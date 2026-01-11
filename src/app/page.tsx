@@ -322,44 +322,48 @@ export default function Home() {
 
               {isCategoryDropdownOpen && !loading && (
                 <div className="ml-4 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 p-2 space-y-1 max-h-[40vh] overflow-y-auto">
-                  {categories.map((category) => (
-                    <div
-                      key={category.id}
-                      className={`group flex items-center justify-between px-4 py-2 rounded-lg text-sm transition-all w-full cursor-pointer md:group-hover:bg-gray-100 ${
-                        selectedCategoryId === category.id
-                          ? "bg-purple-100 text-purple-700 font-medium"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                      onClick={() => {
-                        setSelectedCategoryId(category.id)
-                        setCurrentPage("questions")
-                        setIsCategoryDropdownOpen(false)
-                        setIsMobileMenuOpen(false)
-                      }}
-                    >
-                      <span className="flex-1 text-left truncate">{category.name}</span>
-                      <span className="text-xs text-gray-500 mr-2">({categoryQuestionCounts[category.id] || 0})</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (!isAuthenticated) {
-                            showAlert("请先登录", "warning")
-                            return
-                          }
-                          handleDeleteCategory(category.id)
-                        }}
-                        disabled={!isAuthenticated}
-                        className={`md:opacity-0 md:group-hover:opacity-100 ml-2 transition-opacity ${
-                          !isAuthenticated ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                  {categories.length === 0 ? (
+                    <div className="text-center text-gray-500 py-4">暂无分类</div>
+                  ) : (
+                    categories.map((category) => (
+                      <div
+                        key={category.id}
+                        className={`group flex items-center justify-between px-4 py-2 rounded-lg text-sm transition-all w-full cursor-pointer md:group-hover:bg-gray-100 ${
+                          selectedCategoryId === category.id
+                            ? "bg-purple-100 text-purple-700 font-medium"
+                            : "text-gray-600 hover:bg-gray-100"
                         }`}
-                        title="删除分类"
+                        onClick={() => {
+                          setSelectedCategoryId(category.id)
+                          setCurrentPage("questions")
+                          setIsCategoryDropdownOpen(false)
+                          setIsMobileMenuOpen(false)
+                        }}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                        <span className="flex-1 text-left truncate">{category.name}</span>
+                        <span className="text-xs text-gray-500 mr-2">({categoryQuestionCounts[category.id] || 0})</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!isAuthenticated) {
+                              showAlert("请先登录", "warning")
+                              return
+                            }
+                            handleDeleteCategory(category.id)
+                          }}
+                          disabled={!isAuthenticated}
+                          className={`md:opacity-0 md:group-hover:opacity-100 ml-2 transition-opacity ${
+                            !isAuthenticated ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                          }`}
+                          title="删除分类"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -478,43 +482,47 @@ export default function Home() {
 
                 {isCategoryDropdownOpen && !loading && (
                   <div className="ml-4 space-y-1 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 p-2 max-h-96 overflow-y-auto">
-                    {categories.map((category) => (
-                      <div
-                        key={category.id}
-                        className={`group flex items-center justify-between px-4 py-2 rounded-lg text-sm transition-all w-full cursor-pointer ${
-                          selectedCategoryId === category.id
-                            ? "bg-purple-100 text-purple-700 font-medium"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                        onClick={() => {
-                          setSelectedCategoryId(category.id)
-                          setCurrentPage("questions")
-                          setIsCategoryDropdownOpen(false)
-                        }}
-                      >
-                        <span className="flex-1 text-left truncate">{category.name}</span>
-                        <span className="text-xs text-gray-500 mr-2">({categoryQuestionCounts[category.id] || 0})</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (!isAuthenticated) {
-                              showAlert("请先登录", "warning")
-                              return
-                            }
-                            handleDeleteCategory(category.id)
-                          }}
-                          disabled={!isAuthenticated}
-                          className={`opacity-0 group-hover:opacity-100 ml-2 transition-opacity ${
-                            !isAuthenticated ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                    {categories.length === 0 ? (
+                      <div className="text-center text-gray-500 py-4">暂无分类</div>
+                    ) : (
+                      categories.map((category) => (
+                        <div
+                          key={category.id}
+                          className={`group flex items-center justify-between px-4 py-2 rounded-lg text-sm transition-all w-full cursor-pointer ${
+                            selectedCategoryId === category.id
+                              ? "bg-purple-100 text-purple-700 font-medium"
+                              : "text-gray-600 hover:bg-gray-100"
                           }`}
-                          title="删除分类"
+                          onClick={() => {
+                            setSelectedCategoryId(category.id)
+                            setCurrentPage("questions")
+                            setIsCategoryDropdownOpen(false)
+                          }}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
+                          <span className="flex-1 text-left truncate">{category.name}</span>
+                          <span className="text-xs text-gray-500 mr-2">({categoryQuestionCounts[category.id] || 0})</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (!isAuthenticated) {
+                                showAlert("请先登录", "warning")
+                                return
+                              }
+                              handleDeleteCategory(category.id)
+                            }}
+                            disabled={!isAuthenticated}
+                            className={`opacity-0 group-hover:opacity-100 ml-2 transition-opacity ${
+                              !isAuthenticated ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
+                            }`}
+                            title="删除分类"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
