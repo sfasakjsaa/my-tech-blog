@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import type { Category } from "@/lib/api"
 import HomePage from "@/app/page/HomePage"
 import QuestionBankPage from "@/app/page/QuestionBankPage"
@@ -38,13 +38,23 @@ export default function Home() {
 
   const hasCheckedAuth = useRef(false)
 
-  const showAlert = (message: string, type: "success" | "error" | "info" | "warning" = "info", title?: string) => {
-    setAlertModal({ isOpen: true, title, message, type })
-  }
+  // 使用useMemo缓存计算结果
+  const selectedCategory = useMemo(() => {
+    return categories.find(c => c.id === selectedCategoryId)
+  }, [categories, selectedCategoryId])
 
-  const closeAlert = () => {
+  // 使用useCallback优化回调函数
+  const showAlert = useCallback((message: string, type: "success" | "error" | "info" | "warning" = "info", title?: string) => {
+    setAlertModal({ isOpen: true, title, message, type })
+  }, [])
+
+  const closeAlert = useCallback(() => {
     setAlertModal({ isOpen: false, message: "" })
-  }
+  }, [])
+
+  const handleOpenInputDialog = useCallback(() => {
+    setIsInputDialogOpen(true)
+  }, [])
 
   const reloadCategoriesWithCounts = async () => {
     try {
@@ -116,9 +126,8 @@ export default function Home() {
     loadCategories()
   }, [])
 
-
-
-  const handleLogin = (password: string) => {
+  // 使用useCallback优化回调函数
+  const handleLogin = useCallback((password: string) => {
     if (login(password)) {
       setLoginError("")
       setShowAuthModal(false)
@@ -126,19 +135,25 @@ export default function Home() {
     } else {
       setLoginError("密码错误，请重试")
     }
-  }
+  }, [login, showAlert])
 
-  const handleGuestAccess = () => {
+  const handleGuestAccess = useCallback(() => {
     setLoginError("")
     loginAsGuest()
     setShowAuthModal(false)
     showAlert("游客模式：只能查看，无法进行操作", "info", "游客访问")
-  }
+  }, [loginAsGuest, showAlert])
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout()
     setShowAuthModal(true)
-  }
+  }, [logout])
+
+  const handlePageChange = useCallback((page: "home" | "questions") => {
+    setCurrentPage(page)
+    setIsMobileMenuOpen(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
   const handleDeleteCategory = async (id: string) => {
     if (!isAuthenticated) {
@@ -216,13 +231,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
-      <div className="md:hidden">
-        <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl shadow-lg border-b border-white/50">
+      <div className="md:hidden relative min-h-screen">
+        {/* 固定顶部导航栏 */}
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-white/90 backdrop-blur-xl shadow-lg border-b border-white/50 safe-area-top">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors active:scale-95"
               >
                 <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {isMobileMenuOpen ? (
@@ -236,19 +252,19 @@ export default function Home() {
                 <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg">
                   A
                 </div>
-                <span className="font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent text-base">
                   阿真博客
                 </span>
               </div>
             </div>
             {!isAuthenticated ? (
-              <button onClick={() => setShowAuthModal(true)} className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+              <button onClick={() => setShowAuthModal(true)} className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all active:scale-95">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                 </svg>
               </button>
             ) : (
-              <button onClick={handleLogout} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all">
+              <button onClick={handleLogout} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all active:scale-95">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
@@ -256,13 +272,11 @@ export default function Home() {
             )}
           </div>
 
+          {/* 移动端菜单下拉 */}
           {isMobileMenuOpen && (
-            <div className="px-4 pb-4 space-y-2">
+            <div className="px-4 pb-4 space-y-2 border-t border-gray-100 bg-white/90 backdrop-blur-xl">
               <button
-                onClick={() => {
-                  setCurrentPage("home")
-                  setIsMobileMenuOpen(false)
-                }}
+                onClick={() => handlePageChange("home")}
                 className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 ${
                   currentPage === "home"
                     ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
@@ -291,9 +305,7 @@ export default function Home() {
                       if (categories.length > 0 && !selectedCategoryId) {
                         setSelectedCategoryId(categories[0].id)
                       }
-                      setIsMobileMenuOpen(false)
-                      // 滚动到页面顶部
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      handlePageChange("questions")
                     }}
                     className="flex items-center gap-3 flex-1 text-left"
                   >
@@ -348,6 +360,8 @@ export default function Home() {
                           setCurrentPage("questions")
                           setIsCategoryDropdownOpen(false)
                           setIsMobileMenuOpen(false)
+                          // 确保滚动到顶部
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
                           // 滚动到页面顶部
                           window.scrollTo({ top: 0, behavior: 'smooth' })
                         }}
@@ -402,7 +416,8 @@ export default function Home() {
           )}
         </div>
 
-        <div className="h-[100dvh] flex flex-col pt-20">
+        {/* 移动端内容区域 - 使用pt-16为固定导航栏留出空间 */}
+        <div className="h-screen flex flex-col pt-[72px] overflow-hidden">
           {currentPage === "home" ? (
             <div className="px-4 flex-1 overflow-y-auto pb-8">
               <HomePage />

@@ -4,6 +4,28 @@
 @layer base {
   body {
     @apply antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  /* 移动端安全区域支持 */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* 优化滚动性能 */
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* 防止移动端回弹效果 */
+  .no-bounce {
+    overscroll-behavior: contain;
   }
 }
 

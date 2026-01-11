@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import type { Question } from "@/lib/api"
 import RichTextEditor from "@/components/RichTextEditor"
 import ConfirmDialog from "@/components/ConfirmDialog"
@@ -99,21 +99,23 @@ export default function QuestionBankPage({
     onConfirm: () => {},
   })
 
-  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+  const showConfirm = useCallback((title: string, message: string, onConfirm: () => void) => {
     setConfirmDialog({ isOpen: true, title, message, onConfirm })
-  }
+  }, [])
 
-  const closeConfirm = () => {
+  const closeConfirm = useCallback(() => {
     setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} })
-  }
+  }, [])
 
-  // 根据筛选条件过滤题目
-  const filteredQuestions = questions.filter((question) => {
-    if (filterType === "all") return true
-    if (filterType === "frequent") return question.isFrequent
-    if (filterType === "non-frequent") return !question.isFrequent
-    return true
-  })
+  // 根据筛选条件过滤题目 - 使用useMemo优化性能
+  const filteredQuestions = useMemo(() => {
+    return questions.filter((question) => {
+      if (filterType === "all") return true
+      if (filterType === "frequent") return question.isFrequent
+      if (filterType === "non-frequent") return !question.isFrequent
+      return true
+    })
+  }, [questions, filterType])
 
   // Question Modal
   const [showQuestionModal, setShowQuestionModal] = useState(false)
@@ -149,8 +151,8 @@ export default function QuestionBankPage({
     loadQuestions()
   }, [selectedCategoryId, searchQuery])
 
-  // 清理内容中的图片删除按钮（用于显示）
-  const cleanContentForDisplay = (html: string): string => {
+  // 清理内容中的图片删除按钮（用于显示）- 使用useMemo缓存
+  const cleanContentForDisplay = useCallback((html: string): string => {
     if (typeof window !== 'undefined') {
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
@@ -162,7 +164,7 @@ export default function QuestionBankPage({
       return tempDiv.innerHTML
     }
     return html
-  }
+  }, [])
 
   // 新增问题
   const handleAddQuestion = () => {
