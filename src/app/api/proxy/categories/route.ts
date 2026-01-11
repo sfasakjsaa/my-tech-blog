@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 
-const BACKEND_URL = 'https://azhen-blog-backend.onrender.com'
+const BACKEND_URL = process.env.NODE_ENV === 'development'
+  ? 'http://localhost:8080'
+  : 'https://azhen-blog-backend.onrender.com'
 
 export async function GET(request: Request) {
   try {

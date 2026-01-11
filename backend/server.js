@@ -159,6 +159,47 @@ app.post('/api/categories/reorder', async (req, res) => {
   }
 });
 
+// Batch import categories
+app.post('/api/categories/batch', async (req, res) => {
+  try {
+    const { categories: categoryNames } = req.body;
+
+    if (!Array.isArray(categoryNames) || categoryNames.length === 0) {
+      return res.status(400).json({ success: false, message: 'Categories array is required' });
+    }
+
+    const existingCategories = await readData('categories.json');
+    const maxOrder = existingCategories.length > 0 ? Math.max(...existingCategories.map(c => c.order)) : 0;
+
+    const now = new Date().toISOString();
+    const newCategories = categoryNames.map((name, index) => ({
+      id: Date.now().toString() + index,
+      name,
+      order: maxOrder + index + 1,
+      createdAt: now,
+      updatedAt: now
+    }));
+
+    const allCategories = [...existingCategories, ...newCategories];
+    await writeData('categories.json', allCategories);
+
+    res.json(successResponse(newCategories));
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Clear all data (for testing)
+app.delete('/api/categories/clear', async (req, res) => {
+  try {
+    await writeData('categories.json', []);
+    await writeData('questions.json', []);
+    res.json(successResponse(null));
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============ Questions API ============
 
 // Get questions list

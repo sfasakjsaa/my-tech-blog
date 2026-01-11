@@ -7,7 +7,7 @@ const BACKEND_URL = process.env.NODE_ENV === 'development'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const response = await fetch(`${BACKEND_URL}/api/categories/reorder`, {
+    const response = await fetch(`${BACKEND_URL}/api/categories/batch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
