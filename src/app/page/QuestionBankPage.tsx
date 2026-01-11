@@ -332,7 +332,7 @@ export default function QuestionBankPage({
       )}
 
       {/* 移动端搜索框 */}
-      <div className="md:hidden px-4 py-3 flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+      <div className="md:hidden px-4 py-3 flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm sticky top-0 z-[10]">
         <div className="relative">
           <svg
             className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"
@@ -353,7 +353,7 @@ export default function QuestionBankPage({
       </div>
 
       {/* 筛选和操作按钮 */}
-      <div className="md:hidden px-4 py-3 flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+      <div className="md:hidden px-4 py-3 flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm sticky top-[60px] z-[10]">
         <div className="flex items-center gap-2">
           <select
             value={filterType}

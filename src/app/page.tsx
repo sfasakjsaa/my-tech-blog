@@ -233,8 +233,8 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
       {/* 移动端布局 - 导航栏在顶部 */}
       <div className="md:hidden">
-        {/* 固定顶部导航栏 */}
-        <header className="fixed top-0 left-0 right-0 z-[70] bg-white border-b-4 border-indigo-500 shadow-2xl safe-area-top">
+        {/* 固定顶部导航栏 - 始终显示在顶部 */}
+        <header className="fixed top-0 left-0 right-0 z-[100] bg-white border-b-4 border-indigo-500 shadow-2xl safe-area-top">
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50">
             <div className="flex items-center gap-2">
               <button
@@ -253,7 +253,7 @@ export default function Home() {
                 <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg">
                   A
                 </div>
-                <span className="font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent text-base">
+                <span className="font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-base">
                   阿真博客
                 </span>
               </div>
@@ -273,7 +273,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* 移动端菜单下拉 */}
+          {/* 移动端菜单下拉 - 固定在导航栏下方 */}
           {isMobileMenuOpen && (
             <div className="px-4 pb-4 space-y-2 border-t border-gray-200 bg-white/95 backdrop-blur-xl">
               <button
@@ -415,8 +415,8 @@ export default function Home() {
           )}
         </header>
 
-        {/* 移动端内容区域 */}
-        <main className="h-screen pt-[72px] overflow-y-auto bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
+        {/* 移动端内容区域 - 使用z-[50]确保在导航栏下方 */}
+        <main className="h-screen pt-[72px] overflow-y-auto overflow-x-hidden bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 relative z-[50]">
           {currentPage === "home" ? (
             <div>
               <HomePage />
