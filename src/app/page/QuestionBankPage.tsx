@@ -41,25 +41,34 @@ export default function QuestionBankPage({
 
   // 当分类变化时重新加载题目
   useEffect(() => {
-    console.log("[DEBUG] selectedCategoryId changed:", selectedCategoryId)
+    console.log("[DEBUG] QuestionBankPage - selectedCategoryId changed:", selectedCategoryId)
+    console.log("[DEBUG] QuestionBankPage - searchQuery:", searchQuery)
+
     if (!selectedCategoryId) {
-      console.log("[DEBUG] No selectedCategoryId, skipping questions load")
+      console.log("[DEBUG] QuestionBankPage - No selectedCategoryId, skipping questions load")
       setQuestions([])
       setLoading(false)
       return
     }
 
     const loadQuestions = async () => {
-      console.log("[DEBUG] Loading questions for category:", selectedCategoryId)
+      console.log("[DEBUG] QuestionBankPage - Loading questions for category:", selectedCategoryId)
       setLoading(true)
       try {
         const result = await questionApi.list({ categoryId: selectedCategoryId, search: searchQuery })
+        console.log("[DEBUG] QuestionBankPage - API result:", result)
         if (result.success && result.data) {
-          console.log("[DEBUG] Loaded questions count:", result.data.length)
+          console.log("[DEBUG] QuestionBankPage - Loaded questions count:", result.data.length)
           setQuestions(result.data)
+        } else {
+          console.error("[DEBUG] QuestionBankPage - API returned failure:", result)
+          showAlert("加载题目失败，请重试", "error")
+          setQuestions([])
         }
       } catch (error) {
-        console.error("Error loading questions:", error)
+        console.error("[DEBUG] QuestionBankPage - Error loading questions:", error)
+        showAlert("加载题目失败，请检查网络连接", "error")
+        setQuestions([])
       } finally {
         setLoading(false)
       }

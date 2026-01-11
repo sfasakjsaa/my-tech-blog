@@ -292,6 +292,8 @@ export default function Home() {
                         setSelectedCategoryId(categories[0].id)
                       }
                       setIsMobileMenuOpen(false)
+                      // 滚动到页面顶部
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
                     className="flex items-center gap-3 flex-1 text-left"
                   >
@@ -346,6 +348,8 @@ export default function Home() {
                           setCurrentPage("questions")
                           setIsCategoryDropdownOpen(false)
                           setIsMobileMenuOpen(false)
+                          // 滚动到页面顶部
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
                         }}
                       >
                         <span className="flex-1 text-left truncate">{category.name}</span>
@@ -460,6 +464,8 @@ export default function Home() {
                       if (categories.length > 0 && !selectedCategoryId) {
                         setSelectedCategoryId(categories[0].id)
                       }
+                      // 滚动到页面顶部
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
                     className="flex items-center gap-3 flex-1 text-left"
                   >
@@ -513,6 +519,8 @@ export default function Home() {
                             setSelectedCategoryId(category.id)
                             setCurrentPage("questions")
                             setIsCategoryDropdownOpen(false)
+                            // 滚动到页面顶部
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
                           }}
                         >
                           <span className="flex-1 text-left truncate">{category.name}</span>
