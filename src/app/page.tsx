@@ -116,15 +116,12 @@ export default function Home() {
     loadCategories()
   }, [])
 
-  // 当切换到题库页面时，自动展开分类列表并选中第一个分类
+  // 当切换到题库页面时，自动展开分类列表
   useEffect(() => {
     if (currentPage === "questions") {
       setIsCategoryDropdownOpen(true)
-      if (categories.length > 0 && !selectedCategoryId) {
-        setSelectedCategoryId(categories[0].id)
-      }
     }
-  }, [currentPage, categories, selectedCategoryId])
+  }, [currentPage])
 
   const handleLogin = (password: string) => {
     if (login(password)) {
@@ -296,7 +293,6 @@ export default function Home() {
                   <button
                     onClick={() => {
                       setCurrentPage("questions")
-                      setIsCategoryDropdownOpen(true)
                       if (categories.length > 0 && !selectedCategoryId) {
                         setSelectedCategoryId(categories[0].id)
                       }
@@ -310,7 +306,10 @@ export default function Home() {
                     <span className="font-medium">题库</span>
                   </button>
                   <button
-                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
+                    }}
                     className="p-2 -m-2 hover:bg-black/5 rounded transition-colors"
                   >
                     <svg
@@ -463,7 +462,6 @@ export default function Home() {
                   <button
                     onClick={() => {
                       setCurrentPage("questions")
-                      setIsCategoryDropdownOpen(true)
                       if (categories.length > 0 && !selectedCategoryId) {
                         setSelectedCategoryId(categories[0].id)
                       }
@@ -476,7 +474,10 @@ export default function Home() {
                     <span className="font-medium">题库</span>
                   </button>
                   <button
-                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
+                    }}
                     className="p-2 -m-2 hover:bg-black/5 rounded transition-colors"
                   >
                     <svg
