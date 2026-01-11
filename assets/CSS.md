@@ -1,636 +1,650 @@
-### *1.src和href的区别
+- JavaScript共有八种数据类型，分别是 Undefined、Null、Boolean、Number、String、Object、Symbol、BigInt。
 
-**回答：**
+  其中 Symbol 和 BigInt 是ES6 中新增的数据类型：
 
-**src 用于替换当前元素，href 建立链接（指向外部资源，不替换当前元素）**🍇
+  - Symbol 代表创建后独一无二且不可变的数据类型，它主要是为了解决可能出现的全局变量冲突的问题。
+  - BigInt 是一种数字类型的数据，它可以表示任意精度格式的整数，使用 BigInt 可以安全地存储和操作大整数，即使这个数已经超出了 Number 能够表示的安全整数范围。
 
-（1）src
+  这些数据可以分为原始数据类型和引用数据类型：
 
-```HTML
-<script src="”js.js”"></script>
-```
+  - 栈：原始数据类型（Undefined、Null、Boolean、Number、String）
+  - 堆：引用数据类型（对象、数组和函数）
 
-src会阻塞浏览器后续资源的加载和解析，必须等它加载完才能继续（所以JS脚本通常放在页面底部，避免阻塞渲染）
+  两种类型的区别在于**存储位置的不同：**
 
-(2) href
+  - 原始数据类型直接存储在栈（stack）中的简单数据段，占据空间小、大小固定，属于被频繁使用数据，所以放入栈中存储；
+  - 引用数据类型存储在堆（heap）中的对象，占据空间大、大小不固定。如果存储在栈中，将会影响程序运行的性能；引用数据类型在栈中存储了指针，该指针指向堆中该实体的起始地址。当解释器寻找引用值时，会首先检索其在栈中的地址，取得地址后从堆中获得实体。
 
-href 是 Hypertext Reference 的缩写，指向网络资源所在位置，建立和当前元素（锚点）或当前文档（链接）之间的链接，如果在文档中添加
+  堆和栈的概念存在于数据结构和操作系统内存中，在数据结构中：
 
-```HTML
-<link href=”common.css” rel=”stylesheet”/>
-```
+  - 在数据结构中，栈中数据的存取方式为先进后出。
+  - 堆是一个优先队列，是按优先级来进行排序的，优先级可以按照大小来规定。
 
-会并行下载资源,不阻塞当前文档的处理（所以CSS用link标签加载，不会影响页面渲染）
+  在操作系统中，内存被分为栈区和堆区：
 
-### *2.对HTML语义化的理解
+  - 栈区内存由编译器自动分配释放，存放函数的参数值，局部变量的值等。其操作方式类似于数据结构中的栈。
+  - 堆区内存一般由开发着分配释放，若开发者不释放，程序结束时可能由垃圾回收机制回收。
 
-**回答：**
+  ### 2. * 数据类型检测的方式有哪些
 
-语义化是指**用正确的标签做正确的事，根据内容结构选合适的标签**。
+  **回答：**检测的方法typeof，instanceof，
 
-语义化的优点如下：
+  **（1）typeof**
 
-- 对机器友好，搜索引擎能更好地抓取信息（有利于SEO），读屏软件也能正确识别；
-- 对开发者友好，代码结构清晰，维护起来方便
+  console.log(typeof 2);               // number
 
-常见的语义化标签：
+  console.log(typeof true);            // boolean
 
-<header></header>  头部
+  console.log(typeof 'str');           // string
 
-<nav></nav>  导航栏
+  console.log(typeof []);              // object
 
-<section></section>  区块（有语义化的div）
+  console.log(typeof function(){});    // function
 
-<main></main>  主要区域
+  console.log(typeof {});              // object
 
-<article></article>  主要内容
+  console.log(typeof undefined);       // undefined
 
-<aside></aside>  侧边栏
+  console.log(typeof null);            // object
 
-<footer></footer>  底部
+  其中数组、对象、null都会被判断为object，其他判断都正确。
 
-### *3.DOCTYPE(⽂档类型) 的作⽤
+  **（2）instanceof**
 
-**回答：**
+  `instanceof`可以正确判断对象的类型，其内部运行机制是**判断在其原型链中能否找到该类型的原型**。
 
-DOCTYPE是HTML文档第一行的声明，作用是告诉浏览器用什么规则解析网页。 它会影响浏览器的渲染模式：如果有正确的DOCTYPE，浏览器用“标准模式”（按W3C标准解析）；如果没有或写错了，可能会用“怪异模式”（兼容旧网页的松散规则）。
+  console.log(2 instanceof Number);                    // false
 
-**解析：**
+  console.log(true instanceof Boolean);                // false
 
-DOCTYPE是HTML5中一种标准通用标记语言的文档类型声明，它的目的是告诉浏览器（解析器）应该以什么样（html或xhtml）的文档类型定义**来解析文档**，不同的渲染模式会影响浏览器对 CSS 代码甚⾄ JavaScript 脚本的解析。它必须声明在HTML⽂档的第⼀⾏。
+  console.log('str' instanceof String);                // false
 
-浏览器渲染页面的两种模式（可通过document.compatMode获取，比如，语雀官网的文档类型是**CSS1Compat**）：
+  console.log([] instanceof Array);                    // true
 
-- **CSS1Compat：标准模式（Strick mode）**，默认模式，浏览器使用W3C的标准解析渲染页面。在标准模式中，浏览器以其支持的最高标准呈现页面。
-- **BackCompat：怪异模式(混杂模式)(Quick mode)**，浏览器使用自己的怪异模式解析渲染页面。在怪异模式中，页面以一种比较宽松的向后兼容的方式显示。
+  console.log(function(){} instanceof Function);       // true
 
-### *4. script标签中defer和async的区别
+  console.log({} instanceof Object);                   // true
 
-**回答：**
+  可以看到，`instanceof`**只能正确判断引用数据类型**，而不能判断基本数据类型。`instanceof` 运算符可以用来测试一个对象在其原型链中是否存在一个构造函数的 `prototype` 属性。
 
-script标签的defer和async都是用来异步加载JS脚本的，不会阻塞HTML解析。 它们的区别主要在执行顺序和时机：
+  **（3） constructor**
 
-1. 执行顺序 ：async脚本谁先加载完谁先执行，没有固定顺序；defer脚本严格按HTML中的顺序执行。
-2. 执行时机 ：async脚本加载完成后立即执行（可能打断HTML解析）；defer脚本等HTML完全解析完才执行。 比如统计代码适合用async，因为它不依赖其他脚本；而依赖jQuery的插件适合用defer，因为需要保证jQuery先加载执行。
+  console.log((2).constructor === Number); // true
 
-**解析：**
+  console.log((true).constructor === Boolean); // true
 
-如果没有defer或async属性，浏览器会立即加载并执行相应的脚本。它不会等待后续加载的文档元素，读取到就会开始加载和执行，这样就阻塞了后续文档的加载。
+  console.log(('str').constructor === String); // true
 
-下图可以直观的看出三者之间的区别:
+  console.log(([]).constructor === Array); // true
 
-![img](https://secure2.wostatic.cn/static/pDxTtgxUjNyhp3qBV3aAcY/image.png?auth_key=1768101425-aX29hbuz2r2AZX5MRR44Xo-0-d9e8040c0eafad75cea439b98ffc835f)
+  console.log((function() {}).constructor === Function); // true
 
-其中蓝色代表js脚本网络加载时间，红色代表js脚本执行时间，绿色代表html解析。
+  console.log(({}).constructor === Object); // true
 
-**defer 和 async属性都是去异步加载外部的JS脚本文件，它们都不会阻塞页面的解析**，其区别如下：
+  `constructor`有两个作用，一是判断数据的类型，二是对象实例通过 `constrcutor` 对象访问它的构造函数。需要注意，如果创建一个对象来改变它的原型，`constructor`就不能用来判断数据类型了：
 
-- **执行顺序：**多个带async属性的标签，不能保证加载的顺序；多个带defer属性的标签，按照加载顺序执行；
-- **脚本是否并行执行：async属性，表示**后续文档的加载和执行与js脚本的加载和执行是并行进行的，即异步执行；defer属性，加载后续文档的过程和js脚本的加载(此时仅加载不执行)是并行进行的(异步)，js脚本需要等到文档所有元素解析完成之后才执行，DOMContentLoaded事件触发执行之前。
+  function Fn(){};
 
-### *5. 常⽤的meta标签有哪些
+  Fn.prototype = new Array();
 
-**回答：**
+  var f = new Fn();
 
-meta标签是HTML里用来描述网页属性的辅助标签，在里，不显示在页面上。 常用的有这几个：
+  console.log(f.constructor===Fn);    // false
 
-1. charset ：设置编码为UTF-8，避免乱码；
-2. keywords/description ：给搜索引擎看的关键词和简介，帮助SEO；
-3. viewport ：移动端适配必须加，让页面占满屏幕；
-4. refresh ：设置自动刷新或跳转页面；
-5. robots ：控制搜索引擎爬虫是否索引页面。
+  console.log(f.constructor===Array); // true
 
-**解析：**
+  **（4）Object.prototype.toString.call()**
 
-`meta` 标签由 `name` 和 `content` 属性定义，**用来描述网页文档的属性**，比如网页的作者，网页描述，关键词等，除了HTTP标准固定了一些`name`作为大家使用的共识，开发者还可以自定义name。
+  `Object.prototype.toString.call()` 使用 Object 对象的原型方法 toString 来判断数据类型：
 
-常用的meta标签：
+  var a = Object.prototype.toString;
 
-（1）`charset`，用来描述HTML文档的编码类型：
+  console.log(a.call(2));
 
-```HTML
-<meta charset="UTF-8" >
-```
+  console.log(a.call(true));
 
-（2） `keywords`，页面关键词：
+  console.log(a.call('str'));
 
-```HTML
-<meta name="keywords" content="关键词" />
-```
+  console.log(a.call([]));
 
-（3）`description`，页面描述：
+  console.log(a.call(function(){}));
 
-```HTML
-<meta name="description" content="页面描述内容" />
-```
+  console.log(a.call({}));
 
-（4）`refresh`，页面重定向和刷新：
+  console.log(a.call(undefined));
 
-```HTML
-<meta http-equiv="refresh" content="0;url=" />
-```
+  console.log(a.call(null));
 
-（5）`viewport`，适配移动端，可以控制视口的大小和比例：
+  同样是检测对象obj调用toString方法，obj.toString()的结果和Object.prototype.toString.call(obj)的结果不一样，这是为什么？
 
-```HTML
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-```
+  这是因为toString是Object的原型方法，而Array、function等**类型作为Object的实例，都重写了toString方法**。不同的对象类型调用toString方法时，根据原型链的知识，调用的是对应的重写之后的toString方法（function类型返回内容为函数体的字符串，Array类型返回元素组成的字符串…），而不会去调用Object上原型toString方法（返回对象的具体类型），所以采用obj.toString()不能得到其对象类型，只能将obj转换为字符串类型；因此，在想要得到对象的具体类型时，应该调用Object原型上的toString方法。
 
-其中，`content` 参数有以下几种：
+  ### 3.*  判断数组的方式有哪些
 
-- `width viewport` ：宽度(数值/device-width)
-- `height viewport` ：高度(数值/device-height)
-- `initial-scale` ：初始缩放比例
-- `maximum-scale` ：最大缩放比例
-- `minimum-scale` ：最小缩放比例
-- `user-scalable` ：是否允许用户缩放(yes/no）
+  **回答：**Array.isArray()
 
-（6）搜索引擎索引方式：
+  - 通过Object.prototype.toString.call()做判断
 
-<meta name="robots" content="index,follow" />
+    Object.prototype.toString.call(obj).slice(8,-1) === 'Array';
 
-其中，`content` 参数有以下几种：
+  - 通过原型链做判断
 
-- `all`：文件将被检索，且页面上的链接可以被查询；
-- `none`：文件将不被检索，且页面上的链接不可以被查询；
-- `index`：文件将被检索；
-- `follow`：页面上的链接可以被查询；
-- `noindex`：文件将不被检索；
-- `nofollow`：页面上的链接不可以被查询。
+    obj.**proto** === Array.prototype;
 
-### *6. HTML5有哪些更新
+  - 通过ES6的Array.isArray()做判断
 
-**回答：**
+    Array.isArrray(obj);
 
-HTML5的更新主要有这几个方面：
+  - 通过instanceof做判断
 
-1. 语义化标签 ：新增header、nav、footer、article等，让HTML结构更清晰，对SEO友好；
-2. 多媒体支持 ：audio、video标签原生播放音视频，告别Flash；
-3. 表单增强 ：新的输入类型（email、date、color等）和属性（placeholder、required等），减少JS验证；
-4. 客户端存储 ：localStorage和sessionStorage，比Cookie容量大、更安全；
-5. 新API ：Canvas绘图、Geolocation定位、Web Worker后台线程、WebSocket实时通信等；
-6. 移除过时元素 ：比如font、center、frameset这些纯表现或过时的标签。
+    obj instanceof Array
 
-**解析：**
+  - 通过Array.prototype.isPrototypeOf
 
-#### 1. 语义化标签
+    Array.prototype.isPrototypeOf(obj)
 
-- header：定义文档的页眉（头部）；
-- nav：定义导航链接的部分；
-- footer：定义文档或节的页脚（底部）；
-- article：定义文章内容；
-- section：定义文档中的节（section、区段）；
-- aside：定义其所处内容之外的内容（侧边）；
+  ### 4.* null和undefined区别
 
-#### 2. 媒体标签
+  **回答：**
 
-（1） audio：音频
+  Undefined 与 Null 都是单值基本类型，分别表示“未定义”和“空对象”；未赋值的变量默认 undefined，可能返回对象的变量可初始化为 null。undefined 不是保留字。typeof null 返回 "object"，双等判等 true，三等判等 false。
 
-```HTML
-<audio src='' controls autoplay loop='true'></audio>
-```
+  **解析：**
 
-属性：
+  首先 Undefined 和 Null 都是基本数据类型，这两个基本数据类型分别都只有一个值，就是 undefined 和 null。
 
-- controls 控制面板
-- autoplay 自动播放
-- loop=‘true’ 循环播放
+  undefined 代表的含义是**未定义**，null 代表的含义是**空对象**。一般变量声明了但还没有定义的时候会返回 undefined，null主要用于赋值给一些可能会返回对象的变量，作为初始化。
 
-（2）video视频
+  undefined 在 JavaScript 中不是一个保留字，这意味着可以使用 undefined 来作为一个变量名，但是这样的做法是非常危险的，它会影响对 undefined 值的判断。我们可以通过一些方法获得安全的 undefined 值，比如说 void 0。
 
-```HTML
-<video src='' poster='imgs/aa.jpg' controls></video>
-```
+  当对这两种类型使用 typeof 进行判断时，Null 类型化会返回 “object”，这是一个历史遗留的问题。当使用双等号对两种类型的值进行比较时会返回 true，使用三个等号时会返回 false。
 
-属性：
+  ### 5.* typeof null 的结果是什么，为什么？
 
-- poster：指定视频还没有完全下载完毕，或者用户还没有点击播放前显示的封面。默认显示当前视频文件的第一针画面，当然通过poster也可以自己指定。
-- controls 控制面板
-- width
-- height
+  typeof null 的结果是Object。
 
-（3）source标签
+  在 JavaScript 第一个版本中，所有值都存储在 32 位的单元中，每个单元包含一个小的 **类型标签(1-3 bits)** 以及当前要存储值的真实数据。类型标签存储在每个单元的低位中，共有五种数据类型：
 
-因为浏览器对视频格式支持程度不一样，为了能够兼容不同的浏览器，可以通过source来指定视频源。
+  000: object   - 当前存储的数据指向一个对象。
 
-```HTML
-<video>
-    <source src='aa.flv' type='video/flv'></source>
-    <source src='aa.mp4' type='video/mp4'></source>
-</video>
-```
+  ```
+  1: int      - 当前存储的数据是一个 31 位的有符号整数。
+  ```
 
-#### 3. 表单
+  010: double   - 当前存储的数据指向一个双精度的浮点数。
 
-**表单类型：**
+  100: string   - 当前存储的数据指向一个字符串。
 
-- email ：能够验证当前输入的邮箱地址是否合法
-- url ： 验证URL
-- number ： 只能输入数字，其他输入不了，而且自带上下增大减小箭头，max属性可以设置为最大值，min可以设置为最小值，value为默认值。
-- search ： 输入框后面会给提供一个小叉，可以删除输入的内容，更加人性化。
-- range ： 可以提供给一个范围，其中可以设置max和min以及value，其中value属性可以设置为默认值
-- color ： 提供了一个颜色拾取器
-- time ： 时分秒
-- date ： 日期选择年月日
-- datatime ： 时间和日期(目前只有Safari支持)
-- datatime-local ：日期时间控件
-- week ：周控件
-- month：月控件
+  110: boolean  - 当前存储的数据是布尔值。
 
-**表单属性：**
+  如果最低位是 1，则类型标签标志位的长度只有一位；如果最低位是 0，则类型标签标志位的长度占三位，为存储其他四种数据类型提供了额外两个 bit 的长度。
 
-- placeholder ：提示信息
-- autofocus ：自动获取焦点
-- autocomplete=“on” 或者 autocomplete=“off” 使用这个属性需要有两个前提：
-- 表单必须提交过
-- 必须有name属性。
-- required：要求输入框不能为空，必须有值才能够提交。
-- pattern=" " 里面写入想要的正则模式，例如手机号patte="^(+86)?\d{10}$"
-- multiple：可以选择多个文件或者多个邮箱
-- form=" form表单的ID"
+  有两种特殊数据类型：
 
-**表单事件：**
+  - undefined的值是 (-2)30(一个超出整数范围的数字)；
+  - null 的值是机器码 NULL 指针(null 指针的值全是 0)
 
-- oninput 每当input里的输入框内容发生变化都会触发此事件。
-- oninvalid 当验证不通过时触发此事件。
+  那也就是说null的类型标签也是000，和Object的类型标签一样，所以会被判定为Object。
 
-#### 4. 进度条、度量器
+  ### 6.* intanceof 操作符的实现原理及实现
 
-- progress标签：用来表示任务的进度（IE、Safari不支持），max用来表示任务的进度，value表示已完成多少
-- meter属性：用来显示剩余容量或剩余库存（IE、Safari不支持）
-- high/low：规定被视作高/低的范围
-- max/min：规定最大/小值
-- value：规定当前度量值
+  instanceof 运算符用于判断构造函数的 prototype 属性是否出现在对象的原型链中的任何位置。
 
-设置规则：min < low < high < max
+  ```JavaScript
+  function myInstanceof(left, right) {
+    // 获取对象的原型
+    let proto = Object.getPrototypeOf(left)
+    // 获取构造函数的 prototype 对象
+    let prototype = right.prototype; 
+    // 判断构造函数的 prototype 对象是否在对象的原型链上
+    while (true) {
+      if (!proto) return false;
+      if (proto === prototype) return true;
+      // 如果没有找到，就继续从其原型上找，Object.getPrototypeOf方法用来获取指定对象的原型
+      proto = Object.getPrototypeOf(proto);
+    }
+  }
+  ```
 
-#### 5.DOM查询操作
+  ### 7.* 为什么0.1+0.2 ! == 0.3，如何让其相等
 
-- document.querySelector()
-- document.querySelectorAll()
+  **回答：**
 
-它们选择的对象可以是标签，可以是类(需要加点)，可以是ID(需要加#)
+  0.1、0.2 在 IEEE 754 双精度浮点里都是无限循环二进制，被截断后两者相加比 0.3 大了一点，所以严格相等失败。
 
-#### 6. Web存储
+  在开发过程中遇到类似这样的问题：
 
-HTML5 提供了两种在客户端存储数据的新方法：
+  ```JavaScript
+  let n1 = 0.1, n2 = 0.2
+  
+  console.log(n1 + n2)  // 0.30000000000000004
+  ```
 
-- localStorage - 没有时间限制的数据存储
-- sessionStorage - 针对一个 session 的数据存储
+  这里得到的不是想要的结果，要想等于0.3，就要把它进行转化：
 
-#### 7. 其他
+  (n1 + n2).toFixed(2) // 注意，toFixed为四舍五入
 
-- 拖放：拖放是一种常见的特性，即抓取对象以后拖到另一个位置。设置元素可拖放：
+  `toFixed(num)` 方法可把 Number 四舍五入为指定小数位数的数字。那为什么会出现这样的结果呢？
 
-  <img draggable="true" />
+  计算机是通过二进制的方式存储数据的，所以计算机计算0.1+0.2的时候，实际上是计算的两个数的二进制的和。0.1的二进制是`0.0001100110011001100...`（1100循环），0.2的二进制是：`0.00110011001100...`（1100循环），这两个数的二进制都是无限循环的数。那JavaScript是如何处理无限循环的二进制小数呢？
 
-- 画布（canvas ）： canvas 元素使用 JavaScript 在网页上绘制图像。画布是一个矩形区域，可以控制其每一像素。canvas 拥有多种绘制路径、矩形、圆形、字符以及添加图像的方法。
+  一般我们认为数字包括整数和小数，但是在 JavaScript 中只有一种数字类型：Number，它的实现遵循IEEE 754标准，使用64位固定长度来表示，也就是标准的double双精度浮点数。在二进制科学表示法中，双精度浮点数的小数部分最多只能保留52位，再加上前面的1，其实就是保留53位有效数字，剩余的需要舍去，遵从“0舍1入”的原则。
 
-```HTML
-<canvas id="myCanvas" width="200" height="100"></canvas>
-```
+  根据这个原则，0.1和0.2的二进制数相加，再转化为十进制数就是：`0.30000000000000004`。
 
-- SVG：SVG 指可伸缩矢量图形，用于定义用于网络的基于矢量的图形，使用 XML 格式定义图形，图像在放大或改变尺寸的情况下其图形质量不会有损失，它是万维网联盟的标准
-- 地理定位：Geolocation（地理定位）用于定位用户的位置。‘
+  下面看一下**双精度数是如何保存**的：
 
-**总结：**
+  ![img](https://secure2.wostatic.cn/static/pCGRc9PjpLgeq5omzhNHCS/2.png?auth_key=1768101739-d9NKEsjJoVkfM8XffF7Zjp-0-e590195345b18d627242749b5d47ec2d)
 
-（1）新增语义化标签：nav、header、footer、aside、section、article
+  - 第一部分（蓝色）：用来存储符号位（sign），用来区分正负数，0表示正数，占用1位
+  - 第二部分（绿色）：用来存储指数（exponent），占用11位
+  - 第三部分（红色）：用来存储小数（fraction），占用52位
 
-（2）音频、视频标签：audio、video
+  对于0.1，它的二进制为：
 
-（3）数据存储：localStorage、sessionStorage
+  ```JavaScript
+  0.00011001100110011001100110011001100110011001100110011001 10011...
+  ```
 
-（4）canvas（画布）、Geolocation（地理定位）、websocket（通信协议）
+  转为科学计数法（科学计数法的结果就是浮点数）：
 
-（5）input标签新增属性：placeholder、autocomplete、autofocus、required
+  ```JavaScript
+  1.1001100110011001100110011001100110011001100110011001*2^-4
+  ```
 
-（6）history API：go、forward、back、pushstate
+  可以看出0.1的符号位为0，指数位为-4，小数位为：
 
-**移除的元素有：**
+  ```JavaScript
+  1001100110011001100110011001100110011001100110011001
+  ```
 
-- 纯表现的元素：basefont，big，center，font, s，strike，tt，u;
-- 对可用性产生负面影响的元素：frame，frameset，noframes；
+  那么问题又来了，**指数位是负数，该如何保存**呢？
 
-### 7. img的srcset属性的作⽤？
+  IEEE标准规定了一个偏移量，对于指数部分，每次都加这个偏移量进行保存，这样即使指数是负数，那么加上这个偏移量也就是正数了。由于JavaScript的数字是双精度数，这里就以双精度数为例，它的指数部分为11位，能表示的范围就是0~2047，IEEE固定**双精度数的偏移量为1023**。
 
-**回答：**
+  - 当指数位不全是0也不全是1时(规格化的数值)，IEEE规定，阶码计算公式为 e-Bias。 此时e最小值是1，则1-1023= -1022，e最大值是2046，则2046-1023=1023，可以看到，这种情况下取值范围是`-1022~1013`。
+  - 当指数位全部是0的时候(非规格化的数值)，IEEE规定，阶码的计算公式为1-Bias，即1-1023= -1022。
+  - 当指数位全部是1的时候(特殊值)，IEEE规定这个浮点数可用来表示3个特殊值，分别是正无穷，负无穷，NaN。 具体的，小数位不为0的时候表示NaN；小数位为0时，当符号位s=0时表示正无穷，s=1时候表示负无穷。
 
-img的srcset属性是用来实现响应式图片的，让浏览器根据不同屏幕条件自动选图片。 主要解决两个问题：小屏幕加载大图片浪费流量，大屏幕加载小图片显示模糊。
+  对于上面的0.1的指数位为-4，-4+1023 = 1019 转化为二进制就是：`1111111011`.
 
-**解析：**
+  所以，0.1表示为：
 
-响应式页面中经常用到根据屏幕密度设置不同的图片。这时就用到了 img 标签的srcset属性。srcset属性用于设置不同屏幕密度下，img 会自动加载不同的图片。用法如下：
+  ```JavaScript
+  0 1111111011 1001100110011001100110011001100110011001100110011001
+  ```
 
-```HTML
-<img src="image-128.png" srcset="image-256.png 2x" />
-```
+  说了这么多，是时候该最开始的问题了，如何实现0.1+0.2=0.3呢？
 
-使用上面的代码，就能实现在屏幕密度为1x的情况下加载image-128.png, 屏幕密度为2x时加载image-256.png。
+  对于这个问题，一个直接的解决方法就是设置一个误差范围，通常称为“机器精度”。对JavaScript来说，这个值通常为2-52，在ES6中，提供了`Number.EPSILON`属性，而它的值就是2-52，只要判断`0.1+0.2-0.3`是否小于`Number.EPSILON`，如果小于，就可以判断为0.1+0.2 ===0.3
 
-按照上面的实现，不同的屏幕密度都要设置图片地址，目前的屏幕密度有1x,2x,3x,4x四种，如果每一个图片都设置4张图片，加载就会很慢。所以就有了新的srcset标准。代码如下：
+  ```JavaScript
+  function numberepsilon(arg1,arg2){                   
+    return Math.abs(arg1 - arg2) < Number.EPSILON;        
+  }        
+  
+  console.log(numberepsilon(0.1 + 0.2, 0.3)); // true
+  ```
 
-```HTML
-<img src="image-128.png"
+  在开发过程中遇到类似这样的问题：
 
-  srcset="image-128.png 128w, image-256.png 256w, image-512.png 512w"
+  ```JavaScript
+  let n1 = 0.1, n2 = 0.2
+  
+  console.log(n1 + n2)  // 0.30000000000000004
+  ```
 
-  sizes="(max-width: 360px) 340px, 128px" />
-```
+  这里得到的不是想要的结果，要想等于0.3，就要把它进行转化：
 
-其中srcset指定图片的地址和对应的图片质量。sizes用来设置图片的尺寸零界点。对于 srcset 中的 w 单位，可以理解成图片质量。如果可视区域小于这个质量的值，就可以使用。浏览器会自动选择一个最小的可用图片。
+  (n1 + n2).toFixed(2) // 注意，toFixed为四舍五入
 
-sizes语法如下：
+  `toFixed(num)` 方法可把 Number 四舍五入为指定小数位数的数字。那为什么会出现这样的结果呢？
 
-sizes="[media query] [length], [media query] [length] ... "
+  计算机是通过二进制的方式存储数据的，所以计算机计算0.1+0.2的时候，实际上是计算的两个数的二进制的和。0.1的二进制是`0.0001100110011001100...`（1100循环），0.2的二进制是：`0.00110011001100...`（1100循环），这两个数的二进制都是无限循环的数。那JavaScript是如何处理无限循环的二进制小数呢？
 
-sizes就是指默认显示128px, 如果视区宽度大于360px, 则显示340px。
+  一般我们认为数字包括整数和小数，但是在 JavaScript 中只有一种数字类型：Number，它的实现遵循IEEE 754标准，使用64位固定长度来表示，也就是标准的double双精度浮点数。在二进制科学表示法中，双精度浮点数的小数部分最多只能保留52位，再加上前面的1，其实就是保留53位有效数字，剩余的需要舍去，遵从“0舍1入”的原则。
 
-### *8. 行内元素有哪些？块级元素有哪些？ 空(void)元素有那些？
+  根据这个原则，0.1和0.2的二进制数相加，再转化为十进制数就是：`0.30000000000000004`。
 
-- 行内元素有：`a b span img input select strong`；
-- 块级元素有：`div ul ol li dl dt dd h1 h2 h3 h4 h5 h6 p`；
+  下面看一下**双精度数是如何保存**的：
 
-空元素，即没有内容的HTML元素。空元素是在开始标签中关闭的，也就是空元素没有闭合标签：
+  ![img](https://secure2.wostatic.cn/static/pCGRc9PjpLgeq5omzhNHCS/2.png?auth_key=1768101739-f5wjWyMF1D2EqrYuc5vek3-0-158fa760c99770de48bb8db9d8616ee4)
 
-- 常见的有：`<br>`、`<hr>`、`<img>`、`<input>`、`<link>`、`<meta>`；
-- 鲜见的有：`<area>`、`<base>`、`<col>`、`<colgroup>`、`<command>`、`<embed>`、`<keygen>`、`<param>`、`<source>`、`<track>`、`<wbr>`。
+  - 第一部分（蓝色）：用来存储符号位（sign），用来区分正负数，0表示正数，占用1位
+  - 第二部分（绿色）：用来存储指数（exponent），占用11位
+  - 第三部分（红色）：用来存储小数（fraction），占用52位
 
-### *9. 对 web worker 的理解
+  对于0.1，它的二进制为：
 
-**回答：**
+  ```JavaScript
+  0.00011001100110011001100110011001100110011001100110011001 10011...
+  ```
 
-Web Worker是HTML5的后台线程技术，主要用来解决JS单线程阻塞的问题。
+  转为科学计数法（科学计数法的结果就是浮点数）：
 
-它的特点是：运行在主线程之外，不影响页面响应；通过postMessage和onmessage与主线程通信；不能访问DOM/BOM，只能做计算。
+  ```JavaScript
+  1.1001100110011001100110011001100110011001100110011001*2^-4
+  ```
 
-**解析：**
+  可以看出0.1的符号位为0，指数位为-4，小数位为：
 
-在 HTML 页面中，如果在执行脚本时，页面的状态是不可相应的，直到脚本执行完成后，页面才变成可相应。web worker 是运行在后台的 js，独立于其他脚本，不会影响页面的性能。 并且通过 postMessage 将结果回传到主线程。这样在进行复杂操作的时候，就不会阻塞主线程了。
+  ```JavaScript
+  1001100110011001100110011001100110011001100110011001
+  ```
 
-如何创建 web worker：
+  那么问题又来了，**指数位是负数，该如何保存**呢？
 
-1. 检测浏览器对于 web worker 的支持性
-2. 创建 web worker 文件（js，回传函数等）
-3. 创建 web worker 对象
+  IEEE标准规定了一个偏移量，对于指数部分，每次都加这个偏移量进行保存，这样即使指数是负数，那么加上这个偏移量也就是正数了。由于JavaScript的数字是双精度数，这里就以双精度数为例，它的指数部分为11位，能表示的范围就是0~2047，IEEE固定**双精度数的偏移量为1023**。
 
-### 10. HTML5的离线储存怎么使用，它的工作原理是什么
+  - 当指数位不全是0也不全是1时(规格化的数值)，IEEE规定，阶码计算公式为 e-Bias。 此时e最小值是1，则1-1023= -1022，e最大值是2046，则2046-1023=1023，可以看到，这种情况下取值范围是`-1022~1013`。
+  - 当指数位全部是0的时候(非规格化的数值)，IEEE规定，阶码的计算公式为1-Bias，即1-1023= -1022。
+  - 当指数位全部是1的时候(特殊值)，IEEE规定这个浮点数可用来表示3个特殊值，分别是正无穷，负无穷，NaN。 具体的，小数位不为0的时候表示NaN；小数位为0时，当符号位s=0时表示正无穷，s=1时候表示负无穷。
 
-**回答：**
+  对于上面的0.1的指数位为-4，-4+1023 = 1019 转化为二进制就是：`1111111011`.
 
-HTML5离线存储是让网页断网也能访问的缓存机制，基于.appcache文件实现。
+  所以，0.1表示为：
 
-工作原理：浏览器解析.appcache清单，缓存指定资源，离线时自动从本地加载。
+  ```JavaScript
+  0 1111111011 1001100110011001100110011001100110011001100110011001
+  ```
 
-**解析：**
+  说了这么多，是时候该最开始的问题了，如何实现0.1+0.2=0.3呢？
 
-离线存储指的是：在用户没有与因特网连接时，可以正常访问站点或应用，在用户与因特网连接时，更新用户机器上的缓存文件。
+  对于这个问题，一个直接的解决方法就是设置一个误差范围，通常称为“机器精度”。对JavaScript来说，这个值通常为2-52，在ES6中，提供了`Number.EPSILON`属性，而它的值就是2-52，只要判断`0.1+0.2-0.3`是否小于`Number.EPSILON`，如果小于，就可以判断为0.1+0.2 ===0.3
 
-**原理：**HTML5的离线存储是基于一个新建的 `.appcache` 文件的缓存机制(不是存储技术)，通过这个文件上的解析清单离线存储资源，这些资源就会像cookie一样被存储了下来。之后当网络在处于离线状态下时，浏览器会通过被离线存储的数据进行页面展示
+  ```JavaScript
+  function numberepsilon(arg1,arg2){                   
+    return Math.abs(arg1 - arg2) < Number.EPSILON;        
+  }        
+  
+  console.log(numberepsilon(0.1 + 0.2, 0.3)); // true
+  ```
 
-**使用方法：**
+  ### 8.* 如何获取安全的 undefined 值？
 
-（1）创建一个和 html 同名的 manifest 文件，然后在页面头部加入 manifest 属性：
+  **回答：**undefined 不是保留字，可被重新赋值导致判断失效；`void <任意表达式>` 永远返回“原装”undefined，故用 `void 0` 即可安全获取真 undefined。
 
-```HTML
-<html lang="en" manifest="index.manifest">
-```
+  因为 undefined 是一个标识符，所以可以被当作变量来使用和赋值，但是这样会影响 undefined 的正常判断。表达式 void ___ 没有返回值，因此返回结果是 undefined。void 并不改变表达式的结果，只是让表达式不返回值。因此可以用 void 0 来获得 undefined。
 
-（2）在 `cache.manifest` 文件中编写需要离线存储的资源：
+  ### 9.* typeof NaN 的结果是什么？number
 
-CACHE MANIFEST
+  NaN 指“不是一个数字”（not a number），NaN 是一个“警戒值”（sentinel value，有特殊用途的常规值），用于指出数字类型中的错误情况，即“执行数学运算没有成功，这是失败后返回的结果”。
 
-```
-#v0.11
+  typeof NaN; // "number"
 
-CACHE:
+  NaN 是一个特殊值，它和自身不相等，是唯一一个非自反（自反，reflexive，即 x === x 不成立）的值。而 NaN !== NaN 为 true。
 
-js/app.js
+  ### 10.* isNaN 和 Number.isNaN 函数的区别？
 
-css/style.css
+  - 函数 isNaN 接收参数后，会尝试将这个参数转换为数值，任何不能被转换为数值的的值都会返回 true，因此非数字值传入也会返回 true ，会影响 NaN 的判断。
+  - 函数 Number.isNaN 会首先判断传入参数是否为数字，如果是数字再继续判断是否为 NaN ，不会进行数据类型的转换，这种方法对于 NaN 的判断更为准确。
 
-NETWORK:
+  ### 11.*  其他值到字符串的转换规则？
 
-resourse/logo.png
+  - Null 和 Undefined 类型 ，null 转换为 "null"，undefined 转换为 "undefined"，
+  - Boolean 类型，true 转换为 "true"，false 转换为 "false"。
+  - Number 类型的值直接转换，不过那些极小和极大的数字会使用指数形式。
+  - Symbol 类型的值直接转换，但是只允许显式强制类型转换，使用隐式强制类型转换会产生错误。
+  - 对普通对象来说，除非自行定义 toString() 方法，否则会调用 toString()（Object.prototype.toString()）来返回内部属性 [[Class]] 的值，如"[object Object]"。如果对象有自己的 toString() 方法，字符串化时就会调用该方法并使用其返回值。
 
-FALLBACK:
+  ### 12.*  其他值到数字值的转换规则？
 
-/ /offline.html
-```
+  - Undefined 类型的值转换为 NaN。
+  - Null 类型的值转换为 0。
+  - Boolean 类型的值，true 转换为 1，false 转换为 0。
+  - String 类型的值转换如同使用 Number() 函数进行转换，如果包含非数字值则转换为 NaN，空字符串为 0。
+  - Symbol 类型的值不能转换为数字，会报错。
+  - 对象（包括数组）会首先被转换为相应的基本类型值，如果返回的是非数字的基本类型值，则再遵循以上规则将其强制转换为数字。
 
-- **CACHE**: 表示需要离线存储的资源列表，由于包含 manifest 文件的页面将被自动离线存储，所以不需要把页面自身也列出来。
-- **NETWORK**: 表示在它下面列出来的资源只有在在线的情况下才能访问，他们不会被离线存储，所以在离线情况下无法使用这些资源。不过，如果在 CACHE 和 NETWORK 中有一个相同的资源，那么这个资源还是会被离线存储，也就是说 CACHE 的优先级更高。
-- **FALLBACK**: 表示如果访问第一个资源失败，那么就使用第二个资源来替换他，比如上面这个文件表示的就是如果访问根目录下任何一个资源失败了，那么就去访问 offline.html 。
+  为了将值转换为相应的基本类型值，抽象操作 ToPrimitive 会首先（通过内部操作 DefaultValue）检查该值是否有valueOf()方法。如果有并且返回基本类型值，就使用该值进行强制类型转换。如果没有就使用 toString() 的返回值（如果存在）来进行强制类型转换。
 
-（3）在离线状态时，操作 `window.applicationCache` 进行离线缓存的操作。
+  如果 valueOf() 和 toString() 均不返回基本类型值，会产生 TypeError 错误。
 
-**如何更新缓存：**
+  ### 13.* 其他值到布尔类型的值的转换规则？
 
-（1）更新 manifest 文件
+  以下这些是假值：
 
-（2）通过 javascript 操作
+  • undefined
 
-（3）清除浏览器缓存
+  • null
 
-**注意事项：**
+  • false
 
-（1）浏览器对缓存数据的容量限制可能不太一样（某些浏览器设置的限制是每个站点 5MB）。
+  • +0、-0 和 NaN
 
-（2）如果 manifest 文件，或者内部列举的某一个文件不能正常下载，整个更新过程都将失败，浏览器继续全部使用老的缓存。
+  • ""
 
-（3）引用 manifest 的 html 必须与 manifest 文件同源，在同一个域下。
+  假值的布尔强制类型转换结果为 false。从逻辑上说，假值列表以外的都应该是真值。
 
-（4）FALLBACK 中的资源必须和 manifest 文件同源。
+  ### 14. || 和 && 操作符的返回值？
 
-（5）当一个资源被缓存后，该浏览器直接请求这个绝对路径也会访问缓存中的资源。
+  || 和 && 首先会对第一个操作数执行条件判断，如果其不是布尔值就先强制转换为布尔类型，然后再执行条件判断。
 
-（6）站点中的其他页面即使没有设置 manifest 属性，请求的资源如果在缓存中也从缓存中访问。
+  - 对于 || 来说，如果条件判断结果为 true 就返回第一个操作数的值，如果为 false 就返回第二个操作数的值。
+  - && 则相反，如果条件判断结果为 true 就返回第二个操作数的值，如果为 false 就返回第一个操作数的值。
 
-（7）当 manifest 文件发生改变时，资源请求本身也会触发更新。
+  || 和 && 返回它们其中一个操作数的值，而非条件判断的结果
 
-### 11. 浏览器是如何对 HTML5 的离线储存资源进行管理和加载？
+  ### 15.* [Object.is](http://Object.is)() 与比较操作符 “===”、“==” 的区别？
 
-- **在线的情况下**，浏览器发现 html 头部有 manifest 属性，它会请求 manifest 文件，如果是第一次访问页面 ，那么浏览器就会根据 manifest 文件的内容下载相应的资源并且进行离线存储。如果已经访问过页面并且资源已经进行离线存储了，那么浏览器就会使用离线的资源加载页面，然后浏览器会对比新的 manifest 文件与旧的 manifest 文件，如果文件没有发生改变，就不做任何操作，如果文件改变了，就会重新下载文件中的资源并进行离线存储。
-- **离线的情况下**，浏览器会直接使用离线存储的资源。
+  - 使用双等号（==）进行相等判断时，如果两边的类型不一致，则会进行强制类型转化后再进行比较。
+  - 使用三等号（===）进行相等判断时，如果两边的类型不一致时，不会做强制类型准换，直接返回 false。
+  - 使用 [Object.is](http://Object.is) 来进行相等判断时，一般情况下和三等号的判断相同，它处理了一些特殊的情况，比如 -0 和 +0 不再相等，两个 NaN 是相等的。
 
-### *12. title与h1的区别、b与strong的区别、i与em的区别？
+  ### 16. 什么是 JavaScript 中的包装类型？
 
-- strong标签有语义，是起到加重语气的效果，而b标签是没有的，b标签只是一个简单加粗标签。b标签之间的字符都设为粗体，strong标签加强字符的语气都是通过粗体来实现的，而搜索引擎更侧重strong标签。
-- title属性没有明确意义只表示是个标题，H1则表示层次明确的标题，对页面信息的抓取有很大的影响
-- **i内容展示为斜体，em表示强调的文本**
+  就是通过toUpperCase属性将小写的字母转化成大写的
 
-### 13. **iframe 有那些优点和缺点？**
+  在 JavaScript 中，基本类型是没有属性和方法的，但是为了便于操作基本类型的值，在调用基本类型的属性或方法时 JavaScript 会在后台隐式地将基本类型的值转换为对象，如：
 
-iframe 元素会创建包含另外一个文档的内联框架（即行内框架）。
+  ```JavaScript
+  const a = "abc";
+  a.length; // 3
+  a.toUpperCase(); // "ABC"
+  ```
 
-**优点：**
+  在访问`'abc'.length`时，JavaScript 将`'abc'`在后台转换成`String('abc')`，然后再访问其`length`属性。
 
-- 用来加载速度较慢的内容（如广告）
-- 可以使脚本可以并行下载
-- 支持跨域通信
+  JavaScript也可以使用`Object`函数显式地将基本类型转换为包装类型：
 
-**缺点：**
+  ```JavaScript
+  var a = 'abc'
+  Object(a) // String {"abc"}
+  ```
 
-- iframe 会阻塞主页面的 onload 事件
-- 无法被一些搜索引擎索识别
-- 会产生很多页面，不容易管理
+  也可以使用`valueOf`方法将包装类型倒转成基本类型：
 
-### 14. label 的作用是什么？如何使用？
+  ```JavaScript
+  var a = 'abc'
+  var b = Object(a)
+  var c = b.valueOf() // 'abc'
+  ```
 
-label标签来定义表单控件的关系：当用户选择label标签时，浏览器会自动将焦点转到和label标签相关的表单控件上。
+  看看如下代码会打印出什么：
 
-- 使用方法1：
+  ```JavaScript
+  var a = new Boolean( false );
+  if (!a) {
+    console.log( "Oops" ); // never runs
+  }
+  ```
 
-```HTML
-<label for="mobile">Number:</label>
+  答案是什么都不会打印，因为虽然包裹的基本类型是`false`，但是`false`被包裹成包装类型后就成了对象，所以其非值为`false`，所以循环体中的内容不会运行。
 
-<input type="text" id="mobile"/>
-```
+  ### 17.* JavaScript 中如何进行隐式类型转换？
 
-- 使用方法2：
+  首先要介绍`ToPrimitive`方法，这是 JavaScript 中每个值隐含的自带的方法，用来将值 （无论是基本类型值还是对象）转换为基本类型值。如果值为基本类型，则直接返回值本身；如果值为对象，其看起来大概是这样：
 
-```HTML
-<label>Date:<input type="text"/></label>
-```
+  ```JavaScript
+  /**
+  - @obj 需要转换的对象
+  - @type 期望的结果类型
+  */
+  
+  ToPrimitive(obj,type)
+  ```
 
-### *15. Canvas和SVG的区别
+  `type`的值为`number`或者`string`。
 
-**（1）SVG：**
+  **（1）当**`type`**为**`number`**时规则如下：**
 
-SVG可缩放矢量图形（Scalable Vector Graphics）是基于可扩展标记语言XML描述的2D图形的语言，SVG基于XML就意味着SVG DOM中的每个元素都是可用的，可以为某个元素附加Javascript事件处理器。在 SVG 中，每个被绘制的图形均被视为对象。如果 SVG 对象的属性发生变化，那么浏览器能够自动重现图形。
+  - 调用`obj`的`valueOf`方法，如果为原始值，则返回，否则下一步；
+  - 调用`obj`的`toString`方法，后续同上；
+  - 抛出`TypeError` 异常。
 
-其特点如下：
+  **（2）当**`type`**为**`string`**时规则如下：**
 
-- 不依赖分辨率
-- 支持事件处理器
-- 最适合带有大型渲染区域的应用程序（比如谷歌地图）
-- 复杂度高会减慢渲染速度（任何过度使用 DOM 的应用都不快）
-- 不适合游戏应用
+  - 调用`obj`的`toString`方法，如果为原始值，则返回，否则下一步；
+  - 调用`obj`的`valueOf`方法，后续同上；
+  - 抛出`TypeError` 异常。
 
-**（2）Canvas：**
+  可以看出两者的主要区别在于调用`toString`和`valueOf`的先后顺序。默认情况下：
 
-Canvas是画布，通过Javascript来绘制2D图形，是逐像素进行渲染的。其位置发生改变，就会重新进行绘制。
+  - 如果对象为 Date 对象，则`type`默认为`string`；
+  - 其他情况下，`type`默认为`number`。
 
-其特点如下：
+  总结上面的规则，对于 Date 以外的对象，转换为基本类型的大概规则可以概括为一个函数：
 
-- 依赖分辨率
-- 不支持事件处理器
-- 弱的文本渲染能力
-- 能够以 .png 或 .jpg 格式保存结果图像
-- 最适合图像密集型的游戏，其中的许多对象会被频繁重绘
+  ```JavaScript
+  var objToNumber = value => Number(value.valueOf().toString())
+  objToNumber([]) === 0
+  objToNumber({}) === NaN
+  ```
 
-注：矢量图，也称为面向对象的图像或绘图图像，在数学上定义为一系列由线连接的点。矢量文件中的图形元素称为对象。每个对象都是一个自成一体的实体，它具有颜色、形状、轮廓、大小和屏幕位置等属性。
+  而 JavaScript 中的隐式类型转换主要发生在`+、-、*、/`以及`==、>、<`这些运算符之间。而这些运算符只能操作基本类型值，所以在进行这些运算前的第一步就是将两边的值用`ToPrimitive`转换成基本类型，再进行操作。
 
-### *16. head 标签有什么作用，其中什么标签必不可少？
+  以下是基本类型的值在不同操作符的情况下隐式转换的规则 （对于对象，其会被`ToPrimitive`转换成基本类型，所以最终还是要应用基本类型转换规则）：
 
-**回答：**
+  1. `+`**操作符**`+`操作符的两边有至少一个`string`类型变量时，两边的变量都会被隐式转换为字符串；其他情况下两边的变量都会被转换为数字。
 
-定义文档头部，包含文档的元信息、样式、脚本等非内容数据
+  ```JavaScript
+  1 + '23' // '123'
+  
+  1 + false // 1 
+  
+  1 + Symbol() // Uncaught TypeError: Cannot convert a Symbol value to a number
+  
+  '1' + false // '1false'
+  
+  false + true // 1
+  ```
 
-- **必需标签**：`<title>`（定义文档标题，浏览器标签栏显示）
+  1. `-`**、**`*`**、**`/`**操作符**`NaN`也是一个数字
 
-**解析：**
+  ```JavaScript
+  1 * '23' // 23
+  
+  1 * false // 0
+  
+  1 / 'aa' // NaN
+  ```
 
-<head> 标签用于定义文档的头部，它是所有头部元素的容器。<head> 中的元素可以引用脚本、指示浏览器在哪里找到样式表、提供元信息等。
+  1. **对于**`==`**操作符**
 
-文档的头部描述了文档的各种属性和信息，包括文档的标题、在 Web 中的位置以及和其他文档的关系等。绝大多数文档头部包含的数据都不会真正作为内容显示给读者。
+     操作符两边的值都尽量转成`number`：
 
-下面这些标签可用在 head 部分：<base>, <link>, <meta>, <script>, <style>, <title>。
+  ```JavaScript
+  3 == true // false, 3 转为number为3，true转为number为1
+  
+  '0' == false //true, '0'转为number为0，false转为number为0
+  
+  '0' == 0 // '0'转为number为0
+  ```
 
-其中 <title> 定义文档的标题，它是 head 部分中唯一必需的元素。
+  1. **对于**`<`**和**`>`**比较符**
 
-### 17. 文档声明（Doctype）和<!Doctype html>有何作用? 严格模式与混杂模式如何区分？它们有何意义?
+     如果两边都是字符串，则比较字母表顺序：
 
-**回答：**
+  ```JavaScript
+  'ca' < 'bd' // false
+  'a' < 'b' // true
+  '12' < 13 // true
+  false > -1 // true
+  var a = {}
+  a > 2 // false
+  a.valueOf() // {}, 上面提到过，ToPrimitive默认type为number，所以先valueOf，结果还是个对象，下一步
+  a.toString() // "[object Object]"，现在是一个字符串了
+  Number(a.toString()) // NaN，根据上面 < 和 > 操作符的规则，要转换成数字
+  NaN > 2 //false，得出比较结果
+  var a = {name:'Jack'}
+  var b = {age: 18}
+  a + b // "[object Object][object Object]"
+  a.valueOf() // {}，上面提到过，ToPrimitive默认type为number，所以先valueOf，结果还是个对象，下一步
+  a.toString() // "[object Object]"
+  b.valueOf() // 同理
+  b.toString() // "[object Object]"
+  a + b // "[object Object][object Object]"
+  ```
 
-**DOCTYPE作用**：告诉浏览器HTML文档的版本，指导正确解析
+  ### 18. `+` 操作符什么时候用于字符串的拼接？
 
-- **<!doctype html>作用**：触发浏览器进入标准模式，使用HTML5标准解析页面
-- **严格模式**：按W3C标准解析，保证跨浏览器一致性
-- **混杂模式**：浏览器用旧版方式解析，兼容老网站
-- **区分**：看DOCTYPE是否存在且正确，HTML5无严格/混杂之分
+  根据 ES5 规范，如果某个操作数是字符串或者能够通过以下步骤转换为字符串的话，+ 将进行拼接操作。如果其中一个操作数是对象（包括数组），则首先对其调用 ToPrimitive 抽象操作，该抽象操作再调用 [[DefaultValue]]，以数字作为上下文。如果不能转换为字符串，则会将其转换为数字类型来进行计算。
 
-**解析：**
+  简单来说就是，如果 + 的其中一个操作数是字符串（或者通过以上步骤最终得到字符串），则执行字符串拼接，否则执行数字加法。
 
-**文档声明的作用：**文档声明是为了告诉浏览器，当前`HTML`文档使用什么版本的`HTML`来写的，这样浏览器才能按照声明的版本来正确的解析。
+  那么对于除了加法的运算符来说，只要其中一方是数字，那么另一方就会被转为数字。
 
-**<!Doctype html>的作用：**`<!doctype html>` 的作用就是让浏览器进入标准模式，使用最新的 `HTML5` 标准来解析渲染页面；如果不写，浏览器就会进入混杂模式，我们需要避免此类情况发生。
+  ### 19. 为什么会有**BigInt**的提案？
 
-**严格模式与混杂模式的区分：**
+  JavaScript中Number.MAX_SAFE_INTEGER表示最⼤安全数字，计算结果是9007199254740991，即在这个数范围内不会出现精度丢失（⼩数除外）。但是⼀旦超过这个范围，js就会出现计算不准确的情况，这在⼤数计算的时候不得不依靠⼀些第三⽅库进⾏解决，因此官⽅提出了BigInt来解决此问题。
 
-- **严格模式**： 又称为标准模式，指浏览器按照`W3C`标准解析代码；
-- **混杂模式**： 又称怪异模式、兼容模式，是指浏览器用自己的方式解析代码。混杂模式通常模拟老式浏览器的行为，以防止老站点无法工作；
+  ### 20.* object.assign和扩展运算法是深拷贝还是浅拷贝，两者区别
 
-**区分**：网页中的`DTD`，直接影响到使用的是严格模式还是浏览模式，可以说`DTD`的使用与这两种方式的区别息息相关。
+  ```JavaScript
+  // 扩展运算符：
+  let outObj = {
+    inObj: {a: 1, b: 2}
+  }
+  
+  let newObj = {...outObj}
+  
+  newObj.inObj.a = 2
+  
+  console.log(outObj) // {inObj: {a: 2, b: 2}}
+  // Object.assign():
+  
+  let outObj = {
+    inObj: {a: 1, b: 2}
+  }
+  
+  let newObj = Object.assign({}, outObj)
+  
+  newObj.inObj.a = 2
+  
+  console.log(outObj) // {inObj: {a: 2, b: 2}}
+  ```
 
-- 如果文档包含严格的`DOCTYPE` ，那么它一般以严格模式呈现（**严格 DTD ——严格模式**）；
-- 包含过渡 `DTD` 和 `URI` 的 `DOCTYPE` ，也以严格模式呈现，但有过渡 `DTD` 而没有 `URI` （统一资源标识符，就是声明最后的地址）会导致页面以混杂模式呈现（**有 URI 的过渡 DTD ——严格模式；没有 URI 的过渡 DTD ——混杂模式**）；
-- `DOCTYPE` 不存在或形式不正确会导致文档以混杂模式呈现（**DTD不存在或者格式不正确——混杂模式**）；
-- `HTML5` 没有 `DTD` ，因此也就没有严格模式与混杂模式的区别，`HTML5` 有相对宽松的 法，实现时，已经尽可能大的实现了向后兼容(**HTML5 没有严格和混杂之分**)。
+  可以看到，两者都是浅拷贝。
 
-总之，**严格模式让各个浏览器统一执行一套规范兼容模式保证了旧网站的正常运行。**
+  - Object.assign()方法接收的第一个参数作为目标对象，后面的所有参数作为源对象。然后把所有的源对象合并到目标对象中。它会修改了一个对象，因此会触发 ES6 setter。
+  - 扩展操作符（…）使用它时，数组或对象中的每一个值都会被拷贝到一个新的数组或对象中。它不复制继承的属性或类的属性，但是它会复制ES6的 symbols 属性。
 
-### 18. 浏览器乱码的原因是什么？如何解决？
+  ### 21.* 如何判断一个对象是空对象
 
-**回答：**
+  通过Object.keys判断长度即可
 
-**原因**：编码不一致（如页面用gbk，内容用utf-8）
+  - 使用JSON自带的.stringify方法来判断：
 
-- **解决方法**：统一使用UTF-8编码（设置`<meta charset="UTF-8">`）
+  ```JavaScript
+  if(Json.stringify(Obj) == '{}' ){
+    console.log('空对象');
+   }
+  ```
 
-**解析：**
+  - 使用ES6新增的方法Object.keys()来判断：
 
-**产生乱码的原因：**
+  ```JavaScript
+  if(Object.keys(Obj).length < 0){
+    console.log('空对象');
+  }
+  ```
 
-- 网页源代码是`gbk`的编码，而内容中的中文字是`utf-8`编码的，这样浏览器打开即会出现`html`乱码，反之也会出现乱码；
-- `html`网页编码是`gbk`，而程序从数据库中调出呈现是`utf-8`编码的内容也会造成编码乱码；
-- 浏览器不能自动检测网页编码，造成网页乱码。
+  运算过程如下：
 
-**解决办法：**
+  又比如：
 
-- 使用软件编辑HTML网页内容；
-- 如果网页设置编码是`gbk`，而数据库储存数据编码格式是`UTF-8`，此时需要程序查询数据库数据显示数据前进程序转码；
-- 如果浏览器浏览时候出现网页乱码，在浏览器中找到转换编码的菜单进行转换。
+  其对比过程如下：
 
-### 19. 渐进增强和优雅降级之间的区别
+  以上说的是基本类型的隐式转换，而对象会被`ToPrimitive`转换为基本类型再进行转换：
 
-**回答：**
-
-**渐进增强**：从基础功能开始，逐步为高级浏览器添加增强效果
-
-- **优雅降级**：先实现完整功能，再为旧浏览器添加兼容性处理
-- **区别**：渐进增强向前看（基础功能优先），优雅降级向后看（完整功能优先）
-
-**解析：**
-
-**（1）渐进增强（progressive enhancement）**：主要是针对低版本的浏览器进行页面重构，保证基本的功能情况下，再针对高级浏览器进行效果、交互等方面的改进和追加功能，以达到更好的用户体验。
-
-**（2）优雅降级 graceful degradation**： 一开始就构建完整的功能，然后再针对低版本的浏览器进行兼容。
-
-**两者区别：**
-
-- 优雅降级是从复杂的现状开始的，并试图减少用户体验的供给；而渐进增强是从一个非常基础的，能够起作用的版本开始的，并在此基础上不断扩充，以适应未来环境的需要；
-- 降级（功能衰竭）意味着往回看，而渐进增强则意味着往前看，同时保证其根基处于安全地带。
-
-“优雅降级”观点认为应该针对那些最高级、最完善的浏览器来设计网站。而将那些被认为“过时”或有功能缺失的浏览器下的测试工作安排在开发周期的最后阶段，并把测试对象限定为主流浏览器（如 IE、Mozilla 等）的前一个版本。 在这种设计范例下，旧版的浏览器被认为仅能提供“简陋却无妨 (poor, but passable)” 的浏览体验。可以做一些小的调整来适应某个特定的浏览器。但由于它们并非我们所关注的焦点，因此除了修复较大的错误之外，其它的差异将被直接忽略。
-
-“渐进增强”观点则认为应关注于内容本身。内容是建立网站的诱因，有的网站展示它，有的则收集它，有的寻求，有的操作，还有的网站甚至会包含以上的种种，但相同点是它们全都涉及到内容。这使得“渐进增强”成为一种更为合理的设计范例。这也是它立即被 Yahoo 所采纳并用以构建其“分级式浏览器支持 (Graded Browser Support)”策略的原因所在。
-
-### 20. 说一下 HTML5 drag API
-
-**回答：**
-
-提供元素拖放功能的事件接口
-
-- 主要事件：dragstart（开始拖放）、dragover（拖放移动中）、drop（完成放置）
-- 作用：实现自定义拖放交互效果
-
-**解析：**
-
-- dragstart：事件主体是被拖放元素，在开始拖放被拖放元素时触发。
-- darg：事件主体是被拖放元素，在正在拖放被拖放元素时触发。
-- dragenter：事件主体是目标元素，在被拖放元素进入某元素时触发。
-- dragover：事件主体是目标元素，在被拖放在某元素内移动时触发。
-- dragleave：事件主体是目标元素，在被拖放元素移出目标元素是触发。
-- drop：事件主体是目标元素，在目标元素完全接受被拖放元素时触发。
-- dragend：事件主体是被拖放元素，在整个拖放操作结束时触发。
+  其他情况下，转换为数字再比较：
