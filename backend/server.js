@@ -131,8 +131,15 @@ app.delete('/api/categories/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
+    // Delete the category
     const filtered = categories.filter(c => c.id !== id);
     await writeData('categories.json', filtered);
+
+    // Delete all questions in this category
+    const questions = await readData('questions.json');
+    const filteredQuestions = questions.filter(q => q.categoryId !== id);
+    await writeData('questions.json', filteredQuestions);
+
     res.json(successResponse(null));
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
