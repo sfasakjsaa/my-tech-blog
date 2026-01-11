@@ -19,7 +19,7 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("")
   const [loading, setLoading] = useState(true)
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(true)
   const [isInputDialogOpen, setIsInputDialogOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [loginError, setLoginError] = useState("")
