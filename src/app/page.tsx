@@ -19,7 +19,7 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("")
   const [loading, setLoading] = useState(true)
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(true)
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
   const [isInputDialogOpen, setIsInputDialogOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [loginError, setLoginError] = useState("")
@@ -115,6 +115,16 @@ export default function Home() {
     }
     loadCategories()
   }, [])
+
+  // 当切换到题库页面时，自动展开分类列表并选中第一个分类
+  useEffect(() => {
+    if (currentPage === "questions") {
+      setIsCategoryDropdownOpen(true)
+      if (categories.length > 0 && !selectedCategoryId) {
+        setSelectedCategoryId(categories[0].id)
+      }
+    }
+  }, [currentPage, categories, selectedCategoryId])
 
   const handleLogin = (password: string) => {
     if (login(password)) {
@@ -286,6 +296,10 @@ export default function Home() {
                   <button
                     onClick={() => {
                       setCurrentPage("questions")
+                      setIsCategoryDropdownOpen(true)
+                      if (categories.length > 0 && !selectedCategoryId) {
+                        setSelectedCategoryId(categories[0].id)
+                      }
                       setIsMobileMenuOpen(false)
                     }}
                     className="flex items-center gap-3 flex-1 text-left"
@@ -447,7 +461,13 @@ export default function Home() {
                   }`}
                 >
                   <button
-                    onClick={() => setCurrentPage("questions")}
+                    onClick={() => {
+                      setCurrentPage("questions")
+                      setIsCategoryDropdownOpen(true)
+                      if (categories.length > 0 && !selectedCategoryId) {
+                        setSelectedCategoryId(categories[0].id)
+                      }
+                    }}
                     className="flex items-center gap-3 flex-1 text-left"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
