@@ -377,7 +377,7 @@ export default function Home() {
                             handleDeleteCategory(category.id)
                           }}
                           disabled={!isAuthenticated}
-                          className={`md:opacity-0 md:group-hover:opacity-100 ml-2 transition-opacity ${
+                          className={`ml-2 transition-opacity ${
                             !isAuthenticated ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
                           }`}
                           title="删除分类"
@@ -550,7 +550,7 @@ export default function Home() {
                               handleDeleteCategory(category.id)
                             }}
                             disabled={!isAuthenticated}
-                            className={`opacity-0 group-hover:opacity-100 ml-2 transition-opacity ${
+                            className={`ml-2 transition-opacity ${
                               !isAuthenticated ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'
                             }`}
                             title="删除分类"

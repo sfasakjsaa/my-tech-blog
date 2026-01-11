@@ -4,8 +4,12 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const app = express();
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 const DATA_DIR = path.join(process.cwd(), 'data');
+
+console.log('Starting server...');
+console.log(`PORT environment variable: ${process.env.PORT}`);
+console.log(`Using port: ${PORT}`);
 
 // Middleware
 app.use(cors());
@@ -273,7 +277,7 @@ app.put('/api/questions/:id', async (req, res) => {
     const { title, content, categoryId, isFrequent } = req.body;
 
     const questions = await readData('questions.json');
-    const index = questions.findIndex(q => q.id === id);
+    const index = questions.findIndex(q => String(q.id) === String(id));
 
     if (index === -1) {
       return res.status(404).json({ success: false, message: 'Question not found' });
@@ -301,13 +305,13 @@ app.delete('/api/questions/:id', async (req, res) => {
     const { id } = req.params;
 
     const questions = await readData('questions.json');
-    const index = questions.findIndex(q => q.id === id);
+    const index = questions.findIndex(q => String(q.id) === String(id));
 
     if (index === -1) {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
 
-    const filtered = questions.filter(q => q.id !== id);
+    const filtered = questions.filter(q => String(q.id) !== String(id));
     await writeData('questions.json', filtered);
     res.json(successResponse(null));
   } catch (error) {
@@ -338,8 +342,8 @@ app.post('/api/questions/reorder', async (req, res) => {
 // Start server
 async function startServer() {
   await initDataDir();
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
     console.log(`Data directory: ${DATA_DIR}`);
   });
 }
