@@ -231,10 +231,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
-      <div className="md:hidden relative min-h-screen">
+      {/* 移动端布局 - 导航栏在顶部 */}
+      <div className="md:hidden">
         {/* 固定顶部导航栏 */}
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-white/90 backdrop-blur-xl shadow-lg border-b border-white/50 safe-area-top">
-          <div className="flex items-center justify-between p-4">
+        <header className="fixed top-0 left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200 safe-area-top">
+          <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -274,7 +275,7 @@ export default function Home() {
 
           {/* 移动端菜单下拉 */}
           {isMobileMenuOpen && (
-            <div className="px-4 pb-4 space-y-2 border-t border-gray-100 bg-white/90 backdrop-blur-xl">
+            <div className="px-4 pb-4 space-y-2 border-t border-gray-200 bg-white/95 backdrop-blur-xl">
               <button
                 onClick={() => handlePageChange("home")}
                 className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 ${
@@ -305,7 +306,8 @@ export default function Home() {
                       if (categories.length > 0 && !selectedCategoryId) {
                         setSelectedCategoryId(categories[0].id)
                       }
-                      handlePageChange("questions")
+                      setIsMobileMenuOpen(false)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
                     className="flex items-center gap-3 flex-1 text-left"
                   >
@@ -360,9 +362,6 @@ export default function Home() {
                           setCurrentPage("questions")
                           setIsCategoryDropdownOpen(false)
                           setIsMobileMenuOpen(false)
-                          // 确保滚动到顶部
-                          window.scrollTo({ top: 0, behavior: 'smooth' })
-                          // 滚动到页面顶部
                           window.scrollTo({ top: 0, behavior: 'smooth' })
                         }}
                       >
@@ -414,12 +413,12 @@ export default function Home() {
               </div>
             </div>
           )}
-        </div>
+        </header>
 
-        {/* 移动端内容区域 - 使用pt-16为固定导航栏留出空间 */}
-        <div className="h-screen flex flex-col pt-[72px] overflow-hidden">
+        {/* 移动端内容区域 */}
+        <main className="h-screen pt-[60px] overflow-hidden">
           {currentPage === "home" ? (
-            <div className="px-4 flex-1 overflow-y-auto pb-8">
+            <div className="h-full overflow-y-auto">
               <HomePage />
             </div>
           ) : (
@@ -431,9 +430,10 @@ export default function Home() {
               onQuestionChange={() => reloadCategoriesWithCounts()}
             />
           )}
-        </div>
+        </main>
       </div>
 
+      {/* 桌面端布局 - 导航栏在左侧 */}
       <div className="hidden md:block">
         <div className="flex min-h-screen">
           <nav className="w-72 bg-white/80 backdrop-blur-xl shadow-xl border-r border-white/50 flex flex-col flex-shrink-0">
@@ -479,7 +479,6 @@ export default function Home() {
                       if (categories.length > 0 && !selectedCategoryId) {
                         setSelectedCategoryId(categories[0].id)
                       }
-                      // 滚动到页面顶部
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
                     className="flex items-center gap-3 flex-1 text-left"
@@ -534,7 +533,6 @@ export default function Home() {
                             setSelectedCategoryId(category.id)
                             setCurrentPage("questions")
                             setIsCategoryDropdownOpen(false)
-                            // 滚动到页面顶部
                             window.scrollTo({ top: 0, behavior: 'smooth' })
                           }}
                         >
