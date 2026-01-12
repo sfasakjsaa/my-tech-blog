@@ -457,7 +457,7 @@ export default function QuestionBankPage({
                         <h3 className="font-bold text-gray-900 text-lg break-words">{question.title}</h3>
                       </div>
                       <div
-                        className="text-base text-gray-800 prose prose-sm max-w-none break-words leading-relaxed overflow-wrap-break-word"
+                        className="text-base text-gray-800 prose prose-sm prose-img:max-w-md prose-img:h-auto prose-img:rounded-lg prose-img:shadow-md max-w-none break-words leading-relaxed overflow-wrap-break-word"
                         style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
                         dangerouslySetInnerHTML={{ __html: cleanContentForDisplay(question.content) }}
                       />
