@@ -19,8 +19,8 @@ const CONFIG = {
   JPEG_QUALITY: 85,
   // WebP 压缩质量 (0-100)
   WEBP_QUALITY: 80,
-  // 上传目录（使用临时目录，通过 API 访问）
-  UPLOAD_DIR: path.join('/tmp', 'uploads'),
+  // 上传目录（使用 public 目录，持久化存储）
+  UPLOAD_DIR: path.join(process.cwd(), 'public', 'uploads'),
 }
 
 // 支持的图片类型
