@@ -457,9 +457,16 @@ export default function QuestionBankPage({
                         <h3 className="font-bold text-gray-900 text-lg break-words">{question.title}</h3>
                       </div>
                       <div
-                        className="text-base text-gray-800 prose prose-sm prose-img:max-w-md prose-img:h-auto prose-img:rounded-lg prose-img:shadow-md max-w-none break-words leading-relaxed overflow-wrap-break-word"
-                        style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
-                        dangerouslySetInnerHTML={{ __html: cleanContentForDisplay(question.content) }}
+                        className="text-base text-gray-800 prose prose-sm max-w-none break-words leading-relaxed overflow-wrap-break-word"
+                        style={{
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word"
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: cleanContentForDisplay(question.content)
+                            .replace(/<img([^>]*)style="[^"]*"([^>]*)>/g, '<img$1style="max-width: 500px; max-height: 500px; width: auto; height: auto; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);"$2>')
+                            .replace(/<img(?![^>]*style=)([^>]*)>/g, '<img style="max-width: 500px; max-height: 500px; width: auto; height: auto; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);"$1>')
+                        }}
                       />
                     </div>
                     <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto mt-3 sm:mt-0">

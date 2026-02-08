@@ -76,8 +76,8 @@ export default function RichTextEditor({
         const imageId = `img-${Date.now()}`
 
         const imageWrapper = `
-          <div class="image-wrapper relative inline-block" data-id="${imageId}">
-            <img src="${imageUrl}" alt="上传的图片" style="max-width: 100%; height: auto;" />
+          <div class="image-wrapper relative inline-block my-4" data-id="${imageId}">
+            <img src="${imageUrl}" alt="上传的图片" style="max-width: 600px; max-height: 600px; width: auto; height: auto;" />
           </div>
         `
 

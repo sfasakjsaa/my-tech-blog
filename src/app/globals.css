@@ -75,3 +75,21 @@ pre code {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400;
 }
+
+/* 图片样式限制 */
+.prose img {
+  max-width: 600px !important;
+  max-height: 600px !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+/* 富文本编辑器中的图片 */
+.rich-editor-content img {
+  max-width: 600px !important;
+  max-height: 600px !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain;
+}
